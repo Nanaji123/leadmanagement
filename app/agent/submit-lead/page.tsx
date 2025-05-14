@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
+import { createLead } from "@/services/leadService"; // adjust path if needed
 
 // CSS type declaration to fix type errors
 type CSSProperties = React.CSSProperties;
@@ -182,21 +183,22 @@ export default function SubmitLead() {
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   
   // Form fields state
-  const [formData, setFormData] = useState({
-    fullName: "",
-    phoneNumber: "",
-    email: "",
-    income: "",
-    panCard: "",
-    gender: "",
-    dob: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    employmentType: "",
-    loanRequirement: ""
-  });
+const [formData, setFormData] = useState({
+  full_name: "", // changed from fullName
+  phone_number: "", // changed from phoneNumber
+  email: "",
+  income: "",
+  pan_card: "", // changed from panCard
+  gender: "",
+  dob: "",
+  address: "",
+  city: "",
+  state: "",
+  pincode: "",
+  employment_type: "", // changed from employmentType
+  loan_requirement: "" // changed from loanRequirement
+});
+
 
   // Check authentication and handle responsive behavior
   useEffect(() => {
@@ -242,71 +244,74 @@ export default function SubmitLead() {
     return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess(false);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setSuccess(false);
 
-    // Validate required fields
-    const requiredFields = ["fullName", "phoneNumber", "email", "income", "panCard", "gender", "dob"];
-    for (const field of requiredFields) {
-      if (!formData[field as keyof typeof formData]) {
-        setError(`${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required`);
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Validate email
-    if (!validateEmail(formData.email)) {
-      setError("Please enter a valid email address");
+  const requiredFields = ["full_name", "phone_number", "email", "income", "pan_card", "gender", "dob"];
+  for (const field of requiredFields) {
+    if (!formData[field as keyof typeof formData]) {
+      setError(`${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required`);
       setLoading(false);
       return;
     }
+  }
 
-    // Validate phone
-    if (!validatePhone(formData.phoneNumber)) {
-      setError("Please enter a valid 10 digit phone number");
-      setLoading(false);
-      return;
-    }
+  if (!validateEmail(formData.email)) {
+    setError("Please enter a valid email address");
+    setLoading(false);
+    return;
+  }
 
-    // Validate PAN
-    if (!validatePAN(formData.panCard)) {
-      setError("Please enter a valid PAN card number (e.g. ABCDE1234F)");
-      setLoading(false);
-      return;
-    }
+  if (!validatePhone(formData.phone_number)) {
+    setError("Please enter a valid 10 digit phone number");
+    setLoading(false);
+    return;
+  }
 
-    try {
-      // In a real app, this would be an API call to submit the lead
-      // Mocking API call for demo
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSuccess(true);
-      setFormData({
-        fullName: "",
-        phoneNumber: "",
-        email: "",
-        income: "",
-        panCard: "",
-        gender: "",
-        dob: "",
-        address: "",
-        city: "",
-        state: "",
-        pincode: "",
-        employmentType: "",
-        loanRequirement: ""
-      });
-      
-    } catch (err) {
-      setError("Failed to submit lead. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!validatePAN(formData.pan_card)) {
+    setError("Please enter a valid PAN card number (e.g. ABCDE1234F)");
+    setLoading(false);
+    return;
+  }
+
+  try {
+    const leadData = {
+      ...formData,
+      created_by: localStorage.getItem("userId")
+    };
+
+    await createLead(leadData);
+
+    setSuccess(true);
+    setFormData({
+      full_name: "",
+      phone_number: "",
+      email: "",
+      income: "",
+      pan_card: "",
+      gender: "",
+      dob: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      employment_type: "",
+      loan_requirement: ""
+    });
+
+  } catch (err) {
+    console.error(err);
+    setError("Failed to submit lead. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
   return (
     <div style={styles.pageWrapper}>
@@ -350,8 +355,8 @@ export default function SubmitLead() {
                   </label>
                   <input
                     type="text"
-                    name="fullName"
-                    value={formData.fullName}
+                    name="full_name"
+                    value={formData.full_name}
                     onChange={handleChange}
                     onFocus={() => setFocusedInput("fullName")}
                     onBlur={() => setFocusedInput(null)}
@@ -369,8 +374,8 @@ export default function SubmitLead() {
                   </label>
                   <input
                     type="text"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
+                    name="phone_number"
+                    value={formData.phone_number}
                     onChange={handleChange}
                     onFocus={() => setFocusedInput("phoneNumber")}
                     onBlur={() => setFocusedInput(null)}
@@ -407,8 +412,8 @@ export default function SubmitLead() {
                   </label>
                   <input
                     type="text"
-                    name="panCard"
-                    value={formData.panCard}
+                    name="pan_card"
+                    value={formData.pan_card}
                     onChange={handleChange}
                     onFocus={() => setFocusedInput("panCard")}
                     onBlur={() => setFocusedInput(null)}
@@ -573,8 +578,8 @@ export default function SubmitLead() {
                 <div>
                   <label style={styles.label}>Employment Type</label>
                   <select
-                    name="employmentType"
-                    value={formData.employmentType}
+                    name="employment_type"
+                    value={formData.employment_type}
                     onChange={handleChange}
                     onFocus={() => setFocusedInput("employmentType")}
                     onBlur={() => setFocusedInput(null)}
@@ -596,8 +601,8 @@ export default function SubmitLead() {
                   <label style={styles.label}>Loan Requirement (₹)</label>
                   <input
                     type="number"
-                    name="loanRequirement"
-                    value={formData.loanRequirement}
+                    name="loan_requirement"
+                    value={formData.loan_requirement}
                     onChange={handleChange}
                     onFocus={() => setFocusedInput("loanRequirement")}
                     onBlur={() => setFocusedInput(null)}

@@ -242,6 +242,8 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
     setIsLoggedIn(false);
     setUserRole(null);
     router.push("/");
@@ -358,7 +360,7 @@ export default function Navbar() {
                   Manage Agents
                 </Link>
         
-                <Link 
+                {/* <Link 
                   href="/admin/profile" 
                   style={{
                     ...styles.navLink,
@@ -368,7 +370,7 @@ export default function Navbar() {
                 >
                   <span style={styles.icon}>👤</span>
                   Profile
-                </Link>
+                </Link> */}
               </div>
             )}
             
@@ -421,7 +423,7 @@ export default function Navbar() {
                 <div style={styles.navSection}>
                   <h3 style={styles.sectionTitle}>Account</h3>
                   
-                  <Link 
+                  {/* <Link 
                     href="/agent/agentprofile" 
                     style={{
                       ...styles.navLink,
@@ -431,7 +433,7 @@ export default function Navbar() {
                   >
                     <span style={styles.icon}>👤</span>
                     My Profile
-                  </Link>
+                  </Link> */}
                 </div>
               </>
             )}

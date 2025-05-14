@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-
+import { getLeadsByUser } from "@/services/leadService";
 // Mock data for lead history
 const MOCK_LEADS = [
   {
@@ -304,30 +304,53 @@ export default function LeadHistory() {
     // Check authentication
     const token = localStorage.getItem("authToken");
     const userRole = localStorage.getItem("userRole");
-    
-    if (!token || userRole !== "agent") {
+    const userId = localStorage.getItem("userId"); // Make sure userId is stored in localStorage
+
+    if (!token || userRole !== "agent" || !userId) {
       router.push("/");
       return;
     }
 
-    // In a real app, fetch leads from API
-    // Using mock data for demo
-    setLoading(false);
-    setLeads(MOCK_LEADS);
-    setFilteredLeads(MOCK_LEADS);
-    
+    // 2. Fetch leads from API
+    const fetchLeads = async () => {
+      try {
+        setLoading(true);
+        const apiLeads = await getLeadsByUser(userId);
+
+        // 3. Map API fields to Lead interface
+        const mappedLeads: Lead[] = apiLeads.map((lead: any) => ({
+          id: lead.id,
+          fullName: lead.full_name,
+          phoneNumber: lead.phone_number,
+          email: lead.email,
+          income: lead.income,
+          city: lead.city,
+          state: lead.state,
+          loanAmount: lead.loan_requirement?.toString() ?? "",
+          status: lead.status.charAt(0).toUpperCase() + lead.status.slice(1), // Capitalize
+          createdAt: lead.created_at,
+        }));
+
+        setLeads(mappedLeads);
+        setFilteredLeads(mappedLeads);
+      } catch (error) {
+        setLeads([]);
+        setFilteredLeads([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+
     // Handle responsive behavior
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };
 
-    // Initial check
     checkIfMobile();
-
-    // Add event listener
     window.addEventListener("resize", checkIfMobile);
-    
-    // Cleanup
+
     return () => window.removeEventListener("resize", checkIfMobile);
   }, [router]);
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { login } from "@/services/authService";
 
 // Custom styles for the form using inline CSS
 const styles = {
@@ -116,39 +117,43 @@ export default function LoginForm({ setIsLoggedIn }: LoginFormProps) {
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      if (username && password) {
-        await new Promise(resolve => setTimeout(resolve, 800));
+  try {
+    if (username && password) {
+      const res = await login({ email: username, password });
 
-        if ((username === "admin" && password === "admin") || 
-            (username === "agent" && password === "agent")) {
-          if (username === "admin") {
-            localStorage.setItem("authToken", "mock-token-admin");
-            localStorage.setItem("userRole", "admin");
-            setIsLoggedIn(true);
-            router.push("/admin/dashboard");
-          } else if (username === "agent") {
-            localStorage.setItem("authToken", "mock-token-agent");
-            localStorage.setItem("userRole", "agent");
-            setIsLoggedIn(true);
-            router.push("/agent/dashboard");
-          }
-        } else {
-          setError("Invalid credentials");
-        }
+      // Destructure properly
+      const { token, user } = res;
+
+      // Store data in localStorage
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userRole", user.role);
+      localStorage.setItem("userId", user.id);
+      localStorage.setItem("userName",  user.email); // fallback if full_name is null
+      setIsLoggedIn(true);
+
+      // Redirect based on role
+      if (user.role === "admin") {
+        router.push("/admin/dashboard");
+      } else if (user.role === "agent") {
+        router.push("/agent/dashboard");
       } else {
-        setError("Please enter both username and password");
+        router.push("/dashboard"); // fallback
       }
-    } catch (err) {
-      setError("Authentication failed. Please try again.");
-    } finally {
-      setLoading(false);
+    } else {
+      setError("Please enter both username and password");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setError("Authentication failed. Please check your credentials.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <form onSubmit={handleSubmit} style={styles.form}>

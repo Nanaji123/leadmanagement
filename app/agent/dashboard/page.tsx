@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-
+import { getLeadsByUser } from "@/services/leadService";
 // Mock data for agent stats
 const MOCK_AGENT_STATS = {
   totalLeads: 28,
@@ -245,34 +245,95 @@ export default function AgentDashboard() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    // Check authentication
+ useEffect(() => {
     const token = localStorage.getItem("authToken");
     const userRole = localStorage.getItem("userRole");
-    
-    if (!token || userRole !== "agent") {
+    const userId = localStorage.getItem("userId");
+
+    if (!token || userRole !== "agent" || !userId) {
       router.push("/");
       return;
     }
 
-    // In a real app, fetch agent data from API
-    // Using mock data for demo
-    setLoading(false);
-    // Mock agent name (in real app, get from API/localStorage)
-    setAgent({ name: "John Doe" });
-    
-    // Handle responsive behavior
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+    // Fetch agent name (if available)
+    const agentName = localStorage.getItem("userName") || "Agent";
+    setAgent({ name: agentName });
+
+    // Fetch leads and calculate stats
+    const fetchLeads = async () => {
+      try {
+        setLoading(true);
+        const apiLeads = await getLeadsByUser(userId);
+
+        // Map API fields to dashboard format
+        const mappedLeads = apiLeads.map((lead: any) => ({
+          id: lead.id,
+          fullName: lead.full_name,
+          createdAt: lead.created_at,
+          status: lead.status.charAt(0).toUpperCase() + lead.status.slice(1),
+          loanAmount: lead.loan_requirement?.toString() ?? "",
+        }));
+
+        // Sort by createdAt descending
+        mappedLeads.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        // Stats calculation
+        const totalLeads = mappedLeads.length;
+        const leadsPending = mappedLeads.filter((l: any) => l.status === "Pending").length;
+        const leadsApproved = mappedLeads.filter((l: any) => l.status === "Approved").length;
+        const leadsRejected = mappedLeads.filter((l: any) => l.status === "Rejected").length;
+        const conversionRate = totalLeads > 0 ? Math.round((leadsApproved / totalLeads) * 100) : 0;
+
+        // Last month and this month leads
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const lastMonth = (thisMonth === 0 ? 11 : thisMonth - 1);
+        const thisYear = now.getFullYear();
+        const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+
+        const thisMonthLeads = mappedLeads.filter((l: any) => {
+          const d = new Date(l.createdAt);
+          return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+        }).length;
+
+        const lastMonthLeads = mappedLeads.filter((l: any) => {
+          const d = new Date(l.createdAt);
+          return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
+        }).length;
+
+        setStats({
+          totalLeads,
+          leadsPending,
+          leadsApproved,
+          leadsRejected,
+          conversionRate,
+          lastMonthLeads,
+          thisMonthLeads,
+        });
+
+        setRecentLeads(mappedLeads.slice(0, 4));
+      } catch (error) {
+        setStats({
+          totalLeads: 0,
+          leadsPending: 0,
+          leadsApproved: 0,
+          leadsRejected: 0,
+          conversionRate: 0,
+          lastMonthLeads: 0,
+          thisMonthLeads: 0,
+        });
+        setRecentLeads([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // Initial check
-    checkIfMobile();
+    fetchLeads();
 
-    // Add event listener
+    // Responsive
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkIfMobile();
     window.addEventListener("resize", checkIfMobile);
-    
-    // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, [router]);
 

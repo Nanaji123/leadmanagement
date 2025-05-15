@@ -6,81 +6,82 @@ import Navbar from "@/components/layout/Navbar";
 import { FiUsers, FiCheckCircle, FiXCircle, FiBarChart2 } from "react-icons/fi";
 import Link from "next/link";
 
-// Mock data for leads
+import { getLeads } from "@/services/leadService";
+
 const MOCK_LEADS = [
   {
     id: 1,
-    fullName: "Rahul Sharma",
+    full_name: "Rahul Sharma",
     phoneNumber: "9876543210",
     email: "rahul.sharma@example.com",
     income: "750000",
     city: "Mumbai",
     state: "Maharashtra",
-    loanRequirement: "500000",
+    loan_requirement: "500000",
     status: "New",
-    createdAt: "2023-07-15T10:30:00Z"
+    created_at: "2023-07-15T10:30:00Z"
   },
   {
     id: 2,
-    fullName: "Priya Patel",
+    full_name: "Priya Patel",
     phoneNumber: "8765432109",
     email: "priya.patel@example.com",
     income: "850000",
     city: "Delhi",
     state: "Delhi",
-    loanRequirement: "750000",
+    loan_requirement: "750000",
     status: "In Review",
-    createdAt: "2023-07-14T09:15:00Z"
+    created_at: "2023-07-14T09:15:00Z"
   },
   {
     id: 3,
-    fullName: "Amit Kumar",
+    full_name: "Amit Kumar",
     phoneNumber: "7654321098",
     email: "amit.kumar@example.com",
     income: "950000",
     city: "Bangalore",
     state: "Karnataka",
-    loanRequirement: "1000000",
+    loan_requirement: "1000000",
     status: "Approved",
-    createdAt: "2023-07-10T14:20:00Z"
+    created_at: "2023-07-10T14:20:00Z"
   },
   {
     id: 4,
-    fullName: "Neha Gupta",
+    full_name: "Neha Gupta",
     phoneNumber: "6543210987",
     email: "neha.gupta@example.com",
     income: "600000",
     city: "Chennai",
     state: "Tamil Nadu",
-    loanRequirement: "400000",
+    loan_requirement: "400000",
     status: "Rejected",
-    createdAt: "2023-07-05T11:45:00Z"
+    created_at: "2023-07-05T11:45:00Z"
   },
   {
     id: 5,
-    fullName: "Vikram Singh",
+    full_name: "Vikram Singh",
     phoneNumber: "5432109876",
     email: "vikram.singh@example.com",
     income: "1200000",
     city: "Hyderabad",
     state: "Telangana",
-    loanRequirement: "800000",
+    loan_requirement: "800000",
     status: "New",
-    createdAt: "2023-07-16T08:30:00Z"
+    created_at: "2023-07-16T08:30:00Z"
   }
 ];
 
 interface Lead {
   id: number;
-  fullName: string;
+  full_name: string;
   phoneNumber: string;
   email: string;
   income: string;
   city: string;
   state: string;
-  loanRequirement: string;
+  loan_requirement: string;
   status: string;
-  createdAt: string;
+  created_at: string;
 }
 
 // Stats calculation functions
@@ -94,7 +95,7 @@ const calculateStats = (leads: Lead[]) => {
   const approvalRate = totalLeads ? Math.round((approvedLeads / totalLeads) * 100) : 0;
   const rejectionRate = totalLeads ? Math.round((rejectedLeads / totalLeads) * 100) : 0;
   
-  const totalLoanAmount = leads.reduce((sum, lead) => sum + parseInt(lead.loanRequirement), 0);
+  const totalLoanAmount = leads.reduce((sum, lead) => sum + parseInt(lead.loan_requirement), 0);
   const avgLoanAmount = totalLeads ? Math.round(totalLoanAmount / totalLeads) : 0;
   
   return {
@@ -139,44 +140,41 @@ export default function AdminDashboard() {
   });
 
   // Check authentication and handle responsive behavior
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    const userRole = localStorage.getItem("userRole");
-    
-    if (!token || userRole !== "admin") {
-      router.push("/");
-      return;
-    }
-    
-    // In a real app, fetch leads from API
-    // Using mock data for demo
-    setLoading(true);
-    try {
-      setTimeout(() => {
-        setLeads(MOCK_LEADS);
-        setFilteredLeads(MOCK_LEADS);
-        setStats(calculateStats(MOCK_LEADS));
-        setLoading(false);
-      }, 500);
-    } catch (err) {
+  // ...existing code...
+useEffect(() => {
+  const token = localStorage.getItem("authToken");
+  const userRole = localStorage.getItem("userRole");
+
+  if (!token || userRole !== "admin") {
+    router.push("/");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+  getLeads()
+    .then((apiLeads) => {
+      setLeads(apiLeads);
+      setFilteredLeads(apiLeads);
+      setStats(calculateStats(apiLeads));
+      setLoading(false);
+    })
+    .catch(() => {
       setError("Failed to load leads");
       setLoading(false);
-    }
-    
-    // Handle responsive behavior
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
+    });
 
-    // Initial check
-    checkIfMobile();
+  // Handle responsive behavior
+  const checkIfMobile = () => {
+    setIsMobile(window.innerWidth < 1024);
+  };
 
-    // Add event listener
-    window.addEventListener("resize", checkIfMobile);
-    
-    // Cleanup
-    return () => window.removeEventListener("resize", checkIfMobile);
-  }, [router]);
+  checkIfMobile();
+  window.addEventListener("resize", checkIfMobile);
+
+  return () => window.removeEventListener("resize", checkIfMobile);
+}, [router]);
+// ...existing code...
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -197,13 +195,13 @@ export default function AdminDashboard() {
     // Filter by date range
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom);
-      result = result.filter(lead => new Date(lead.createdAt) >= fromDate);
+      result = result.filter(lead => new Date(lead.created_at) >= fromDate);
     }
     
     if (filters.dateTo) {
       const toDate = new Date(filters.dateTo);
       toDate.setHours(23, 59, 59, 999); // End of day
-      result = result.filter(lead => new Date(lead.createdAt) <= toDate);
+      result = result.filter(lead => new Date(lead.created_at) <= toDate);
     }
     
     // Filter by location (city or state)
@@ -238,15 +236,15 @@ export default function AdminDashboard() {
     filteredLeads.forEach(lead => {
       const row = [
         String(lead.id),
-        lead.fullName,
+        lead.full_name,
         lead.phoneNumber,
         lead.email,
         lead.income,
         lead.city,
         lead.state,
-        lead.loanRequirement,
+        lead.loan_requirement,
         lead.status,
-        new Date(lead.createdAt).toLocaleDateString()
+        new Date(lead.created_at).toLocaleDateString()
       ];
       csvRows.push(row);
     });
@@ -1048,7 +1046,7 @@ export default function AdminDashboard() {
                           fontWeight: "600",
                           color: "#1e293b",
                         }}>
-                          {lead.fullName}
+                          {lead.full_name}
                         </td>
                         <td style={{
                           padding: "1rem 1.25rem",
@@ -1088,7 +1086,7 @@ export default function AdminDashboard() {
                           color: "#1e293b",
                           fontWeight: "500",
                         }}>
-                          ₹{parseInt(lead.loanRequirement).toLocaleString()}
+                          ₹{parseInt(lead.loan_requirement).toLocaleString()}
                         </td>
                         <td style={{
                           padding: "1rem 1.25rem",
@@ -1126,7 +1124,7 @@ export default function AdminDashboard() {
                           fontSize: "0.875rem",
                           color: "#64748b",
                         }}>
-                          {formatDate(lead.createdAt)}
+                          {formatDate(lead.created_at)}
                         </td>
                         <td style={{
                           padding: "1rem 1.25rem",

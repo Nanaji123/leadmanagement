@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-
+import { updateLeadStatus } from "@/services/leadService";
 // Styles using inline CSS
 const styles = {
   pageWrapper: {

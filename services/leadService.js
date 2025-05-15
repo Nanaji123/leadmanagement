@@ -7,7 +7,7 @@ export const createLead = async (leadData) => {
 
 export const getLeads = async (filters = {}) => {
   const params = new URLSearchParams(filters).toString();
-  const res = await API.get(`/leads${params ? `?${params}` : ''}`);
+  const res = await API.get(`/admin/leads${params ? `?${params}` : ''}`);
   return res.data.leads;
 };
 

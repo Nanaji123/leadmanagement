@@ -300,6 +300,7 @@ interface Lead {
   id: number;
   fullName: string;
   phoneNumber: string;
+  phone_number?: string;
   email: string;
   income: string;
   city: string;
@@ -310,6 +311,13 @@ interface Lead {
   agentId: number;
   createdAt: string;
   updatedAt: string;
+  // Additional fields
+  panCard?: string;
+  gender?: string;
+  dob?: string;
+  address?: string;
+  pincode?: string;
+  employmentType?: string;
 }
 
 export default function AllLeads() {
@@ -342,22 +350,33 @@ export default function AllLeads() {
     setLoading(true);
     getLeads()
       .then((apiLeads) => {
+        console.log("API leads received:", apiLeads);
         // Map API fields to UI fields if needed
-        const mappedLeads = apiLeads.map((lead: any) => ({
-          id: lead.id,
-          fullName: lead.full_name || lead.fullName,
-          phoneNumber: lead.phoneNumber,
-          email: lead.email,
-          income: lead.income,
-          city: lead.city,
-          state: lead.state,
-          loanAmount: lead.loan_requirement || lead.loanAmount,
-          status: lead.status,
-          agentName: lead.agentName || lead.agent_name || "",
-          agentId: lead.agentId || lead.agent_id || "",
-          createdAt: lead.created_at || lead.createdAt,
-          updatedAt: lead.updated_at || lead.updatedAt,
-        }));
+        const mappedLeads = apiLeads.map((lead: any) => {
+          console.log("Lead data:", lead.id, "phone:", lead.phone_number, "phoneNumber:", lead.phoneNumber);
+          return {
+            id: lead.id,
+            fullName: lead.full_name || lead.fullName,
+            phoneNumber: lead.phone_number || lead.phoneNumber || "Not Available",
+            email: lead.email || "Not Available",
+            income: lead.income,
+            city: lead.city,
+            state: lead.state,
+            loanAmount: lead.loan_requirement || lead.loanAmount,
+            status: lead.status,
+            agentName: lead.agentName || lead.agent_name || "",
+            agentId: lead.agentId || lead.agent_id || "",
+            createdAt: lead.created_at || lead.createdAt,
+            updatedAt: lead.updated_at || lead.updatedAt,
+            // Additional fields
+            panCard: lead.panCard || undefined,
+            gender: lead.gender || undefined,
+            dob: lead.dob || undefined,
+            address: lead.address || undefined,
+            pincode: lead.pincode || undefined,
+            employmentType: lead.employmentType || undefined,
+          };
+        });
         setLeads(mappedLeads);
         setFilteredLeads(mappedLeads);
         setLoading(false);
@@ -540,6 +559,34 @@ export default function AllLeads() {
       default:
         return {};
     }
+  };
+
+  const handleViewLead = (lead: Lead) => {
+    // Store lead data in localStorage before navigation
+    localStorage.setItem(`lead_${lead.id}_fullName`, lead.fullName);
+    localStorage.setItem(`lead_${lead.id}_phoneNumber`, lead.phoneNumber);
+    localStorage.setItem(`lead_${lead.id}_email`, lead.email);
+    localStorage.setItem(`lead_${lead.id}_income`, lead.income);
+    localStorage.setItem(`lead_${lead.id}_city`, lead.city);
+    localStorage.setItem(`lead_${lead.id}_state`, lead.state);
+    localStorage.setItem(`lead_${lead.id}_loanAmount`, lead.loanAmount);
+    localStorage.setItem(`lead_${lead.id}_status`, lead.status);
+    localStorage.setItem(`lead_${lead.id}_agentName`, lead.agentName);
+    localStorage.setItem(`lead_${lead.id}_agentId`, lead.agentId.toString());
+    localStorage.setItem(`lead_${lead.id}_createdAt`, lead.createdAt);
+    localStorage.setItem(`lead_${lead.id}_updatedAt`, lead.updatedAt);
+    
+    // Store additional fields only if they exist in the data
+    if (lead.panCard) localStorage.setItem(`lead_${lead.id}_panCard`, lead.panCard);
+    if (lead.gender) localStorage.setItem(`lead_${lead.id}_gender`, lead.gender);
+    if (lead.dob) localStorage.setItem(`lead_${lead.id}_dob`, lead.dob);
+    if (lead.address) localStorage.setItem(`lead_${lead.id}_address`, lead.address);
+    if (lead.pincode) localStorage.setItem(`lead_${lead.id}_pincode`, lead.pincode);
+    if (lead.employmentType) localStorage.setItem(`lead_${lead.id}_employmentType`, lead.employmentType);
+    
+    console.log("Storing phone number in localStorage:", lead.phoneNumber);
+    
+    router.push(`/admin/lead-details/${lead.id}`);
   };
 
   if (loading) {
@@ -774,12 +821,22 @@ export default function AllLeads() {
                         {formatDate(lead.updatedAt)}
                       </td>
                       <td style={styles.td}>
-                        <Link 
-                          href={`/admin/lead-details/${lead.id}`}
-                          style={styles.viewLink}
+                        <button
+                          onClick={() => handleViewLead(lead)}
+                          style={{
+                            padding: "0.375rem 0.75rem",
+                            backgroundColor: "#4f46e5",
+                            color: "white",
+                            fontWeight: "500",
+                            fontSize: "0.75rem",
+                            borderRadius: "0.375rem",
+                            border: "none",
+                            cursor: "pointer",
+                            marginRight: "0.5rem",
+                          }}
                         >
                           View Details
-                        </Link>
+                        </button>
                       </td>
                     </tr>
                   ))}

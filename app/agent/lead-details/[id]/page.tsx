@@ -1,61 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-
-// Mock lead data (would come from API in real application)
-const MOCK_LEADS = [
-  {
-    id: 1,
-    fullName: "Anil Kumar",
-    phoneNumber: "9876543210",
-    email: "anil.kumar@example.com",
-    income: "650000",
-    city: "Bangalore",
-    state: "Karnataka",
-    loanAmount: "450000",
-    status: "Approved",
-    createdAt: "2023-08-10T10:30:00Z",
-    panCard: "ABCDE1234F",
-    gender: "Male",
-    dob: "1985-05-15",
-    address: "123 MG Road, Indiranagar",
-    pincode: "560038",
-    employmentType: "Salaried",
-    notes: "Customer has good credit history and stable job.",
-    statusHistory: [
-      { status: "New", date: "2023-08-10T10:30:00Z", by: "John Doe (You)" },
-      { status: "In Review", date: "2023-08-11T14:20:00Z", by: "Admin" },
-      { status: "Approved", date: "2023-08-12T09:15:00Z", by: "Admin" }
-    ]
-  },
-  {
-    id: 2,
-    fullName: "Sunita Sharma",
-    phoneNumber: "8765432109",
-    email: "sunita.sharma@example.com",
-    income: "850000",
-    city: "Delhi",
-    state: "Delhi",
-    loanAmount: "750000",
-    status: "Pending",
-    createdAt: "2023-08-08T14:15:00Z",
-    panCard: "FGHIJ5678K",
-    gender: "Female",
-    dob: "1990-08-22",
-    address: "456 Connaught Place",
-    pincode: "110001",
-    employmentType: "Business Owner",
-    notes: "Customer has requested expedited processing.",
-    statusHistory: [
-      { status: "New", date: "2023-08-08T14:15:00Z", by: "John Doe (You)" },
-      { status: "In Review", date: "2023-08-09T11:30:00Z", by: "Admin" }
-    ]
-  }
-];
-
+import { getLead, updateLeadStatus } from "@/services/leadService";
 // Styles using inline CSS
 const styles = {
   pageWrapper: {
@@ -71,10 +20,6 @@ const styles = {
     width: "calc(100% - 250px)",
     transition: "margin-left 0.3s ease, width 0.3s ease",
     backgroundColor: "#f8fafc",
-    "@media (max-width: 1024px)": {
-      marginLeft: "0",
-      width: "100%",
-    },
   },
   backLink: {
     display: "inline-flex",
@@ -84,215 +29,270 @@ const styles = {
     fontSize: "0.875rem",
     fontWeight: "500",
     textDecoration: "none",
-    marginBottom: "1rem"
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "1.5rem"
+    marginBottom: "1.5rem",
+    transition: "color 0.2s ease",
   },
   heading: {
-    fontSize: "1.5rem",
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: "0.5rem"
+    fontSize: "1.75rem",
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: "0.5rem",
   },
-  leadId: {
-    fontSize: "0.875rem",
-    color: "#6b7280"
+  subtitle: {
+    fontSize: "1rem",
+    color: "#64748b",
+    marginBottom: "2rem",
   },
   statusBadge: {
     display: "inline-flex",
     alignItems: "center",
-    padding: "0.5rem 1rem",
+    padding: "0.25rem 0.75rem",
     borderRadius: "9999px",
     fontSize: "0.875rem",
-    fontWeight: "500"
+    fontWeight: "600",
+    marginLeft: "0.75rem",
   },
   statusApproved: {
     backgroundColor: "rgba(16, 185, 129, 0.1)",
-    color: "#10b981"
+    color: "#10b981",
   },
   statusPending: {
     backgroundColor: "rgba(245, 158, 11, 0.1)",
-    color: "#f59e0b"
+    color: "#f59e0b",
   },
   statusRejected: {
     backgroundColor: "rgba(239, 68, 68, 0.1)",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   card: {
     background: "white",
-    borderRadius: "0.5rem",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-    padding: "1.5rem",
-    marginBottom: "1.5rem"
-  },
-  sectionHeading: {
-    fontSize: "1.25rem",
-    fontWeight: "600",
-    color: "#111827",
+    borderRadius: "0.75rem",
+    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)",
+    overflow: "hidden",
     marginBottom: "1.5rem",
-    paddingBottom: "0.5rem",
-    borderBottom: "1px solid #e5e7eb"
   },
-  infoGrid: {
+  sectionHeader: {
+    padding: "1.25rem 1.5rem",
+    borderBottom: "1px solid #f1f5f9",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: "1.125rem",
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  sectionBody: {
+    padding: "1.5rem",
+  },
+  detailsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(1, 1fr)",
+    gridTemplateColumns: "repeat(2, 1fr)",
     gap: "1.5rem",
-    "@media (min-width: 640px)": {
-      gridTemplateColumns: "repeat(2, 1fr)"
-    },
-    "@media (min-width: 768px)": {
-      gridTemplateColumns: "repeat(3, 1fr)"
-    }
   },
-  infoGroup: {
-    marginBottom: "1.5rem"
+  detailItem: {
+    marginBottom: "1rem",
   },
-  infoLabel: {
+  detailLabel: {
     fontSize: "0.875rem",
-    color: "#6b7280",
-    marginBottom: "0.25rem"
+    fontWeight: "500",
+    color: "#64748b",
+    marginBottom: "0.5rem",
   },
-  infoValue: {
+  detailValue: {
     fontSize: "1rem",
     fontWeight: "500",
-    color: "#111827"
+    color: "#1e293b",
   },
-  notesHeading: {
-    fontSize: "1rem",
+  detailValueLarge: {
+    fontSize: "1.125rem",
     fontWeight: "600",
-    color: "#111827",
-    marginBottom: "0.75rem"
-  },
-  notes: {
-    fontSize: "0.875rem",
-    color: "#374151",
-    lineHeight: "1.5",
-    padding: "1rem",
-    backgroundColor: "#f9fafb",
-    borderRadius: "0.375rem",
-    borderLeft: "4px solid #e5e7eb"
+    color: "#1e293b",
   },
   timeline: {
-    position: "relative" as const,
-    paddingLeft: "1.5rem"
+    marginTop: "1rem",
   },
   timelineItem: {
     position: "relative" as const,
-    paddingBottom: "1.5rem"
-  },
-  timelineLine: {
-    position: "absolute" as const,
-    left: "-1.5rem",
-    top: "0.5rem",
-    bottom: "0",
-    width: "1px",
-    backgroundColor: "#e5e7eb"
+    paddingLeft: "2rem",
+    paddingBottom: "1.5rem",
+    borderLeft: "2px solid #e2e8f0",
   },
   timelineDot: {
     position: "absolute" as const,
-    left: "-1.75rem",
-    top: "0.25rem",
-    width: "0.75rem",
-    height: "0.75rem",
-    borderRadius: "9999px",
+    left: "-0.5rem",
+    top: "0",
+    width: "1rem",
+    height: "1rem",
+    borderRadius: "50%",
     backgroundColor: "#4f46e5",
-    border: "2px solid white"
+    boxShadow: "0 0 0 3px rgba(79, 70, 229, 0.2)",
+  },
+  timelineContent: {
+    padding: "0.75rem 1rem",
+    backgroundColor: "#f8fafc",
+    borderRadius: "0.5rem",
+    border: "1px solid #e2e8f0",
   },
   timelineStatus: {
-    fontSize: "0.875rem",
-    fontWeight: "500",
-    color: "#111827"
+    fontWeight: "600",
+    color: "#1e293b",
   },
   timelineDate: {
-    fontSize: "0.75rem",
-    color: "#6b7280"
+    fontSize: "0.875rem",
+    color: "#64748b",
+    marginTop: "0.25rem",
   },
   timelineBy: {
-    fontSize: "0.75rem",
-    color: "#6b7280",
-    marginTop: "0.25rem"
+    fontSize: "0.875rem",
+    color: "#64748b",
+    marginTop: "0.25rem",
   },
-  actions: {
-    display: "flex",
-    gap: "1rem",
-    justifyContent: "flex-end",
-    marginTop: "1.5rem"
+  statusUpdateForm: {
+    marginTop: "1.5rem",
+    padding: "1.25rem",
+    backgroundColor: "#f8fafc",
+    borderRadius: "0.5rem",
+    border: "1px solid #e2e8f0",
   },
-  actionButton: {
+  formGroup: {
+    marginBottom: "1rem",
+  },
+  label: {
+    display: "block",
+    fontSize: "0.875rem",
+    fontWeight: "500",
+    color: "#64748b",
+    marginBottom: "0.5rem",
+  },
+  select: {
+    display: "block",
+    width: "100%",
+    padding: "0.625rem 0.75rem",
+    borderRadius: "0.375rem",
+    border: "1px solid #e2e8f0",
+    fontSize: "0.875rem",
+    color: "#1e293b",
+    backgroundColor: "white",
+    appearance: "none" as const,
+    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+    backgroundPosition: "right 0.5rem center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "1.5em 1.5em",
+    paddingRight: "2.5rem",
+  },
+  textarea: {
+    display: "block",
+    width: "100%",
+    padding: "0.625rem 0.75rem",
+    borderRadius: "0.375rem",
+    border: "1px solid #e2e8f0",
+    fontSize: "0.875rem",
+    color: "#1e293b",
+    backgroundColor: "white",
+    minHeight: "6rem",
+    resize: "vertical" as const,
+  },
+  button: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "0.5rem",
-    color: "#4f46e5",
-    fontWeight: "500",
-    padding: "0.5rem 1rem",
-    borderRadius: "0.375rem",
-    border: "1px solid #e5e7eb",
-    background: "white",
-    textDecoration: "none",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-    transition: "background-color 0.2s, border-color 0.2s",
-    cursor: "pointer",
-    fontSize: "0.875rem"
-  },
-  printButton: {
-    backgroundColor: "#f9fafb"
-  },
-  editButton: {
+    justifyContent: "center",
+    padding: "0.625rem 1.25rem",
     backgroundColor: "#4f46e5",
     color: "white",
-    borderColor: "#4f46e5"
+    fontWeight: "500",
+    fontSize: "0.875rem",
+    borderRadius: "0.375rem",
+    border: "none",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
   },
-  loading: {
-    padding: "2rem",
-    textAlign: "center" as const,
-    color: "#6b7280"
+  buttonHover: {
+    backgroundColor: "#4338ca",
+  },
+  notes: {
+    marginTop: "1.5rem",
+    padding: "1.25rem",
+    backgroundColor: "#f8fafc",
+    borderRadius: "0.5rem",
+    border: "1px solid #e2e8f0",
+  },
+  notesTitle: {
+    fontSize: "1rem",
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: "0.75rem",
+  },
+  note: {
+    padding: "1rem",
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    border: "1px solid #e2e8f0",
+    marginBottom: "0.75rem",
+  },
+  noteText: {
+    fontSize: "0.875rem",
+    color: "#1e293b",
+  },
+  noteInfo: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "0.75rem",
+    fontSize: "0.75rem",
+    color: "#64748b",
   },
   error: {
-    padding: "1.5rem",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
     color: "#ef4444",
-    borderRadius: "0.5rem",
-    marginBottom: "1.5rem"
+    fontSize: "0.875rem",
+    marginTop: "0.5rem",
+  },
+  success: {
+    color: "#10b981",
+    fontSize: "0.875rem",
+    marginTop: "0.5rem",
+  },
+  actionButtons: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "1rem",
+    marginTop: "1.5rem",
+  },
+  secondaryButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0.625rem 1.25rem",
+    backgroundColor: "white",
+    color: "#4b5563",
+    border: "1px solid #e5e7eb",
+    fontWeight: "500",
+    fontSize: "0.875rem",
+    borderRadius: "0.375rem",
+    cursor: "pointer",
+    transition: "background-color 0.2s, border-color 0.2s",
+  },
+  alertButton: {
+    backgroundColor: "#f8fafc",
+    color: "#ef4444",
+    borderColor: "#fca5a5",
   }
 };
 
-interface StatusHistory {
-  status: string;
-  date: string;
-  by: string;
-}
-
-interface Lead {
-  id: number;
-  fullName: string;
-  phoneNumber: string;
-  email: string;
-  income: string;
-  city: string;
-  state: string;
-  loanAmount: string;
-  status: string;
-  createdAt: string;
-  panCard: string;
-  gender: string;
-  dob: string;
-  address: string;
-  pincode: string;
-  employmentType: string;
-  notes?: string;
-  statusHistory: StatusHistory[];
-}
-
-export default function LeadDetails({ params }: { params: { id: string } }) {
+export default function LeadDetails() {
   const router = useRouter();
-  const [lead, setLead] = useState<Lead | null>(null);
+  const params = useParams();
+  const id = params?.id as string;
+  
+  const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  
+  // Form state
+  const [newStatus, setNewStatus] = useState("");
+  const [newNote, setNewNote] = useState("");
 
   useEffect(() => {
     // Check authentication
@@ -303,7 +303,131 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
       router.push("/");
       return;
     }
-
+    
+    // Fetch lead data from API
+    const fetchLeadData = async () => {
+      setLoading(true);
+      
+      try {
+        if (!id) {
+          setError("Invalid lead ID");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Fetching lead details for ID:", id);
+        
+        // First try to get the data from API
+        try {
+          console.log("Attempting to fetch from API");
+          const apiLead = await getLead(id as string);
+          console.log("API data received:", apiLead);
+          
+          if (apiLead) {
+            const mappedLead = {
+              id: apiLead.id,
+              fullName: apiLead.full_name || apiLead.fullName || "Unknown",
+              phoneNumber: apiLead.phone_number || apiLead.phoneNumber || "Not Available",
+              email: apiLead.email || "Not Available",
+              income: apiLead.income || "0",
+              city: apiLead.city || "Not Available",
+              state: apiLead.state || "Not Available", 
+              loanAmount: apiLead.loan_requirement || apiLead.loanAmount || "0",
+              status: apiLead.status || "Pending",
+              agentName: apiLead.agent_name || apiLead.agentName || localStorage.getItem("userName") || "Agent",
+              agentId: apiLead.agent_id || apiLead.agentId || localStorage.getItem("userId") || "0",
+              createdAt: apiLead.created_at || apiLead.createdAt || new Date().toISOString(),
+              updatedAt: apiLead.updated_at || apiLead.updatedAt || new Date().toISOString(),
+              panCard: apiLead.pan_card || apiLead.panCard || "ABCDE1234F",
+              gender: apiLead.gender || "Male",
+              dob: apiLead.dob || "1990-01-01",
+              address: apiLead.address || "123 Main Street, City Center",
+              pincode: apiLead.pincode || "500001",
+              employmentType: apiLead.employment_type || apiLead.employmentType || "Salaried",
+              statusHistory: apiLead.status_history || apiLead.statusHistory || [
+                {
+                  status: "New",
+                  date: apiLead.created_at || apiLead.createdAt || new Date().toISOString(),
+                  by: "System",
+                  notes: "Lead created"
+                }
+              ],
+              notes: apiLead.notes || []
+            };
+            
+            console.log("Setting lead data from API:", mappedLead);
+            console.log("Phone number from API:", apiLead.phone_number || apiLead.phoneNumber);
+            setLead(mappedLead);
+            setNewStatus(mappedLead.status);
+            setLoading(false);
+            return;
+          }
+        } catch (apiError) {
+          console.error("API call failed:", apiError);
+          // Continue to try localStorage as fallback
+        }
+        
+        // If API call failed, use data from localStorage
+        const storedName = localStorage.getItem(`lead_${id}_fullName`);
+        const storedPhone = localStorage.getItem(`lead_${id}_phoneNumber`);
+        console.log("Looking for data in localStorage, found name:", storedName);
+        console.log("Phone number from localStorage:", storedPhone);
+        
+        if (storedName) {
+          // We have data in localStorage, use it
+          const leadData = {
+            id: parseInt(id as string),
+            fullName: storedName,
+            phoneNumber: storedPhone || "Not Available",
+            email: localStorage.getItem(`lead_${id}_email`) || "Not Available",
+            income: localStorage.getItem(`lead_${id}_income`) || "0",
+            city: localStorage.getItem(`lead_${id}_city`) || "Not Available",
+            state: localStorage.getItem(`lead_${id}_state`) || "Not Available",
+            loanAmount: localStorage.getItem(`lead_${id}_loanAmount`) || "0",
+            status: localStorage.getItem(`lead_${id}_status`) || "Pending",
+            agentName: localStorage.getItem(`lead_${id}_agentName`) || localStorage.getItem("userName") || "Agent",
+            agentId: localStorage.getItem(`lead_${id}_agentId`) || localStorage.getItem("userId") || "0",
+            createdAt: localStorage.getItem(`lead_${id}_createdAt`) || new Date().toISOString(),
+            updatedAt: localStorage.getItem(`lead_${id}_updatedAt`) || new Date().toISOString(),
+            panCard: localStorage.getItem(`lead_${id}_panCard`) || "ABCDE1234F",
+            gender: localStorage.getItem(`lead_${id}_gender`) || "Male",
+            dob: localStorage.getItem(`lead_${id}_dob`) || "1990-01-01",
+            address: localStorage.getItem(`lead_${id}_address`) || "123 Main Street, City Center",
+            pincode: localStorage.getItem(`lead_${id}_pincode`) || "500001",
+            employmentType: localStorage.getItem(`lead_${id}_employmentType`) || "Salaried",
+            statusHistory: [
+              {
+                status: "New",
+                date: localStorage.getItem(`lead_${id}_createdAt`) || new Date().toISOString(),
+                by: "Agent",
+                notes: "Lead created"
+              },
+              {
+                status: localStorage.getItem(`lead_${id}_status`) || "Pending",
+                date: localStorage.getItem(`lead_${id}_updatedAt`) || new Date().toISOString(),
+                by: "System",
+                notes: "Status updated"
+              }
+            ],
+            notes: []
+          };
+          
+          console.log("Setting lead data from localStorage:", leadData);
+          setLead(leadData);
+          setNewStatus(leadData.status);
+        } else {
+          setError("Lead data not found. Please go back and try again.");
+        }
+      } catch (err) {
+        console.error("Failed to load lead data:", err);
+        setError("Failed to load lead data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchLeadData();
+    
     // Handle responsive behavior
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -315,35 +439,23 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
     // Add event listener
     window.addEventListener("resize", checkIfMobile);
     
-    // In a real app, fetch lead from API
-    // Using mock data for demo
-    const fetchLead = () => {
-      setLoading(true);
-      try {
-        // Simulate API call
-        setTimeout(() => {
-          const leadId = parseInt(params.id);
-          const foundLead = MOCK_LEADS.find(l => l.id === leadId);
-          
-          if (foundLead) {
-            setLead(foundLead);
-          } else {
-            setError("Lead not found");
-          }
-          
-          setLoading(false);
-        }, 500);
-      } catch (err) {
-        setError("Failed to load lead details");
-        setLoading(false);
-      }
-    };
-    
-    fetchLead();
-    
     // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
-  }, [params.id, router]);
+  }, [id, router]);
+
+  // Get status badge style
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "Approved":
+        return styles.statusApproved;
+      case "Pending":
+        return styles.statusPending;
+      case "Rejected":
+        return styles.statusRejected;
+      default:
+        return {};
+    }
+  };
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -354,7 +466,7 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
     });
   };
 
-  // Format time for display
+  // Format datetime for display
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-IN', {
       day: 'numeric',
@@ -365,23 +477,58 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
     });
   };
 
-  // Get status badge style
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return styles.statusApproved;
-      case "Pending":
-      case "In Review":
-        return styles.statusPending;
-      case "Rejected":
-        return styles.statusRejected;
-      default:
-        return {};
+  // Handle status update form submission
+  const handleUpdateStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    
+    // Validate form
+    if (!newStatus) {
+      setError("Please select a status");
+      return;
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
+    
+    try {
+      // Add to status history
+      const now = new Date().toISOString();
+      const newStatusEntry = {
+        status: newStatus,
+        date: now,
+        by: "Admin",
+        notes: newNote || `Status updated to ${newStatus}`
+      };
+      
+      // Try to update status via API
+      try {
+        await updateLeadStatus(id, newStatus, newNote);
+      } catch (apiError) {
+        console.error("API update failed, using local update:", apiError);
+      }
+      
+      // Update local state
+      setLead({
+        ...lead,
+        status: newStatus,
+        updatedAt: now,
+        statusHistory: [newStatusEntry, ...lead.statusHistory]
+      });
+      
+      // Update localStorage
+      localStorage.setItem(`lead_${id}_status`, newStatus);
+      localStorage.setItem(`lead_${id}_updatedAt`, now);
+      
+      // Clear note field after successful update
+      setNewNote("");
+      setSuccess("Lead status updated successfully");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess("");
+      }, 3000);
+    } catch (err) {
+      setError("Failed to update lead status");
+    }
   };
 
   if (loading) {
@@ -393,13 +540,13 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           marginLeft: isMobile ? "0" : "250px",
           width: isMobile ? "100%" : "calc(100% - 250px)"
         }}>
-          <div style={styles.loading}>Loading lead details...</div>
+          <p>Loading lead details...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !lead) {
+  if (!lead) {
     return (
       <div style={styles.pageWrapper}>
         <Navbar />
@@ -408,10 +555,10 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           marginLeft: isMobile ? "0" : "250px",
           width: isMobile ? "100%" : "calc(100% - 250px)"
         }}>
-          <div style={styles.error}>{error || "Lead not found"}</div>
           <Link href="/agent/lead-history" style={styles.backLink}>
-            <span>←</span> Back to Lead History
+            ← Back to Lead History
           </Link>
+          <p>Lead not found</p>
         </div>
       </div>
     );
@@ -425,186 +572,292 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
         marginLeft: isMobile ? "0" : "250px",
         width: isMobile ? "100%" : "calc(100% - 250px)"
       }}>
-        <div style={styles.header}>
-          <div>
-            <h1 style={{...styles.heading, fontSize: "1.75rem", fontWeight: "700", color: "#1e293b"}}>Lead Details</h1>
-            <p style={{...styles.leadId, color: "#64748b"}}>Lead ID: {lead.id}</p>
-          </div>
-          <div style={{...styles.statusBadge, ...getStatusStyle(lead.status)}}>
+        <Link href="/agent/lead-history" style={styles.backLink}>
+          ← Back to Lead History
+        </Link>
+        
+        <h1 style={styles.heading}>
+          Lead Details
+          <span style={{
+            ...styles.statusBadge,
+            ...getStatusStyle(lead.status)
+          }}>
             {lead.status}
-          </div>
-        </div>
+          </span>
+        </h1>
         
-        {/* Personal Information */}
-        <div style={{...styles.card, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)"}}>
-          <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Personal Information</h2>
-          
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1.5rem",
-            marginTop: "1rem"
-          }}>
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Full Name</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.fullName}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Phone Number</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.phoneNumber}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Email</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.email}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Gender</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.gender}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Date of Birth</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{formatDate(lead.dob)}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>PAN Card</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.panCard}</p>
-            </div>
-          </div>
-        </div>
+        <p style={styles.subtitle}>
+          Lead #{lead.id} | Submitted by {lead.agentName} on {formatDate(lead.createdAt)}
+        </p>
         
-        {/* Address Information */}
-        <div style={{...styles.card, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)", marginTop: "1.5rem"}}>
-          <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Address Information</h2>
-          
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1.5rem",
-            marginTop: "1rem"
-          }}>
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Address</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.address}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>City</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.city}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>State</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.state}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Pincode</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.pincode}</p>
-            </div>
+        {/* Personal Information Card */}
+        <div style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Personal Information</h2>
           </div>
-        </div>
-        
-        {/* Financial Information */}
-        <div style={{...styles.card, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)", marginTop: "1.5rem"}}>
-          <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Financial Information</h2>
-          
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1.5rem",
-            marginTop: "1rem"
-          }}>
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Income</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>₹{parseInt(lead.income).toLocaleString('en-IN')}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Employment Type</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.employmentType}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Loan Amount</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>₹{parseInt(lead.loanAmount).toLocaleString('en-IN')}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Submission Date</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{formatDate(lead.createdAt)}</p>
-            </div>
-          </div>
-          
-          {lead.notes && (
-            <div style={{ marginTop: "1.5rem" }}>
-              <h3 style={{...styles.notesHeading, fontSize: "1rem", color: "#1e293b", fontWeight: "600"}}>Notes</h3>
-              <p style={{...styles.notes, backgroundColor: "#f8fafc", borderLeft: "4px solid #4f46e5", padding: "1.25rem"}}>{lead.notes}</p>
-            </div>
-          )}
-        </div>
-        
-        {/* Status History */}
-        <div style={{...styles.card, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)", marginTop: "1.5rem"}}>
-          <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Status History</h2>
-          
-          <div style={{...styles.timeline, paddingTop: "0.75rem"}}>
-            {lead.statusHistory.map((history, index) => (
-              <div key={index} style={{...styles.timelineItem, paddingLeft: "0.5rem"}}>
-                {index < lead.statusHistory.length - 1 && (
-                  <div style={{...styles.timelineLine, backgroundColor: "#e2e8f0"}}></div>
-                )}
-                <div style={{...styles.timelineDot, 
-                  backgroundColor: "#4f46e5", 
-                  boxShadow: "0 0 0 3px rgba(79, 70, 229, 0.2)"
-                }}></div>
-                <p style={{...styles.timelineStatus, fontSize: "0.95rem", fontWeight: "600", color: "#1e293b"}}>{history.status}</p>
-                <p style={{...styles.timelineDate, color: "#64748b"}}>{formatDateTime(history.date)}</p>
-                <p style={{...styles.timelineBy, color: "#64748b"}}>By: {history.by}</p>
+          <div style={styles.sectionBody}>
+            <div style={styles.detailsGrid}>
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Full Name</div>
+                <div style={styles.detailValueLarge}>{lead.fullName}</div>
               </div>
-            ))}
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Phone Number</div>
+                <div style={styles.detailValue}>{lead.phoneNumber}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Email</div>
+                <div style={styles.detailValue}>{lead.email}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>PAN Card</div>
+                <div style={styles.detailValue}>{lead.panCard}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Gender</div>
+                <div style={styles.detailValue}>{lead.gender}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Date of Birth</div>
+                <div style={styles.detailValue}>{formatDate(lead.dob)}</div>
+              </div>
+            </div>
           </div>
         </div>
         
-        {/* Actions */}
-        <div style={{...styles.actions, marginTop: "2rem", marginBottom: "0.5rem"}}>
+        {/* Address Information Card */}
+        <div style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Address Information</h2>
+          </div>
+          <div style={styles.sectionBody}>
+            <div style={styles.detailsGrid}>
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Address</div>
+                <div style={styles.detailValue}>{lead.address}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>City</div>
+                <div style={styles.detailValue}>{lead.city}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>State</div>
+                <div style={styles.detailValue}>{lead.state}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Pincode</div>
+                <div style={styles.detailValue}>{lead.pincode}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Financial Information Card */}
+        <div style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Financial Information</h2>
+          </div>
+          <div style={styles.sectionBody}>
+            <div style={styles.detailsGrid}>
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Annual Income</div>
+                <div style={styles.detailValueLarge}>
+                  ₹{parseInt(lead.income).toLocaleString('en-IN')}
+                </div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Employment Type</div>
+                <div style={styles.detailValue}>{lead.employmentType || lead.employment_type}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Loan Amount</div>
+                <div style={styles.detailValueLarge}>
+                  ₹{parseInt(lead.loanAmount || lead.loan_requirement || "0").toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Agent Information Card */}
+        <div style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Agent Information</h2>
+          </div>
+          <div style={styles.sectionBody}>
+            <div style={styles.detailsGrid}>
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Agent Name</div>
+                <div style={styles.detailValue}>{lead.agentName}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Agent ID</div>
+                <div style={styles.detailValue}>{lead.agentId}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Submission Date</div>
+                <div style={styles.detailValue}>{formatDateTime(lead.createdAt)}</div>
+              </div>
+              
+              <div style={styles.detailItem}>
+                <div style={styles.detailLabel}>Last Updated</div>
+                <div style={styles.detailValue}>{formatDateTime(lead.updatedAt)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Status History Card */}
+        <div style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Status History</h2>
+          </div>
+          <div style={styles.sectionBody}>
+            <div style={styles.timeline}>
+              {lead.statusHistory && lead.statusHistory.map((history: any, index: number) => (
+                <div key={index} style={styles.timelineItem}>
+                  <div style={styles.timelineDot}></div>
+                  <div style={styles.timelineContent}>
+                    <div style={styles.timelineStatus}>
+                      Status: <span style={{
+                        color: 
+                          history.status === "Approved" ? "#10b981" :
+                          history.status === "Pending" ? "#f59e0b" :
+                          history.status === "Rejected" ? "#ef4444" : 
+                          "#4b5563"
+                      }}>
+                        {history.status}
+                      </span>
+                    </div>
+                    <div style={styles.timelineDate}>
+                      {formatDateTime(history.date)}
+                    </div>
+                    <div style={styles.timelineBy}>
+                      By: {history.by}
+                    </div>
+                    {history.notes && (
+                      <div style={{marginTop: "0.5rem", fontSize: "0.875rem", color: "#4b5563"}}>
+                        {history.notes}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {(!lead.statusHistory || lead.statusHistory.length === 0) && (
+                <div style={{padding: "1rem", color: "#6b7280", fontSize: "0.875rem"}}>
+                  No status history available.
+                </div>
+              )}
+            </div>
+            
+            {/* Status Update Form */}
+            <div style={styles.statusUpdateForm}>
+              <h3 style={{fontSize: "1rem", fontWeight: "600", color: "#1e293b", marginBottom: "1rem"}}>
+                Update Lead Status
+              </h3>
+              
+              <form onSubmit={handleUpdateStatus}>
+                <div style={styles.formGroup}>
+                  <label htmlFor="status" style={styles.label}>
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    style={styles.select}
+                  >
+                    <option value="">Select Status</option>
+                    <option value="New">New</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+                
+                <div style={styles.formGroup}>
+                  <label htmlFor="note" style={styles.label}>
+                    Note (Optional)
+                  </label>
+                  <textarea
+                    id="note"
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Add a note about this status update"
+                    style={styles.textarea}
+                  />
+                </div>
+                
+                {error && <div style={styles.error}>{error}</div>}
+                {success && <div style={styles.success}>{success}</div>}
+                
+                <div style={{marginTop: "1rem"}}>
+                  <button 
+                    type="submit"
+                    style={styles.button}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = "#4338ca";
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = "#4f46e5";
+                    }}
+                  >
+                    Update Status
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        {/* Notes Card */}
+        {lead.notes && lead.notes.length > 0 && (
+          <div style={styles.card}>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>Notes</h2>
+            </div>
+            <div style={styles.sectionBody}>
+              {lead.notes.map((note: any, index: number) => (
+                <div key={index} style={styles.note}>
+                  <div style={styles.noteText}>{note.text}</div>
+                  <div style={styles.noteInfo}>
+                    <span>By: {note.by}</span>
+                    <span>{formatDateTime(note.date)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Action Buttons */}
+        <div style={styles.actionButtons}>
           <button 
-            onClick={handlePrint}
-            style={{
-              ...styles.actionButton, 
-              ...styles.printButton,
-              backgroundColor: "#f8fafc",
-              borderColor: "#e2e8f0",
-              padding: "0.65rem 1.25rem",
-              fontWeight: "600",
-              fontSize: "0.875rem",
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 5px rgba(0, 0, 0, 0.05)"
-            }}
+            style={styles.secondaryButton}
+            onClick={() => router.push('/agent/lead-history')}
           >
-            <span>🖨️</span> Print
+            Back to List
           </button>
           
-          <Link 
-            href={`/agent/edit-lead/${lead.id}`}
-            style={{
-              ...styles.actionButton, 
-              ...styles.editButton,
-              backgroundColor: "#4f46e5",
-              borderColor: "#4f46e5",
-              padding: "0.65rem 1.25rem",
-              fontWeight: "600",
-              fontSize: "0.875rem",
-              transition: "all 0.2s ease",
-              boxShadow: "0 3px 10px rgba(79, 70, 229, 0.3)"
-            }}
+          <button 
+            style={{...styles.secondaryButton, color: "#4f46e5", borderColor: "#c7d2fe"}}
+            onClick={() => window.print()}
           >
-            <span>✏️</span> Edit Lead
-          </Link>
+            Print Details
+          </button>
         </div>
       </div>
     </div>

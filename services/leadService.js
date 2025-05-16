@@ -11,8 +11,13 @@ export const getLeads = async (filters = {}) => {
   return res.data.leads;
 };
 
-export const updateLeadStatus = async (id, status) => {
-  const res = await API.put(`/leads/${id}/status`, { status });
+export const getLead = async (id) => {
+  const res = await API.get(`/admin/leads/${id}`);
+  return res.data.lead;
+};
+
+export const updateLeadStatus = async (id, status, note) => {
+  const res = await API.put(`/leads/${id}/status`, { status, note });
   return res.data.lead;
 };
 
@@ -29,8 +34,6 @@ export const exportLeadsCSV = async () => {
   link.click();
   link.remove();
 };
-
-
 
 export const getLeadsByUser = async (userId) => {
   const res = await API.get(`/leads/user/${userId}`);

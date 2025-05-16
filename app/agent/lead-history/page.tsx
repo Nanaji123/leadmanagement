@@ -5,105 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import { getLeadsByUser } from "@/services/leadService";
-// Mock data for lead history
-const MOCK_LEADS = [
-  {
-    id: 1,
-    fullName: "Anil Kumar",
-    phoneNumber: "9876543210",
-    email: "anil.kumar@example.com",
-    income: "650000",
-    city: "Bangalore",
-    state: "Karnataka",
-    loanAmount: "450000",
-    status: "Approved",
-    createdAt: "2023-08-10T10:30:00Z"
-  },
-  {
-    id: 2,
-    fullName: "Sunita Sharma",
-    phoneNumber: "8765432109",
-    email: "sunita.sharma@example.com",
-    income: "850000",
-    city: "Delhi",
-    state: "Delhi",
-    loanAmount: "750000",
-    status: "Pending",
-    createdAt: "2023-08-08T14:15:00Z"
-  },
-  {
-    id: 3,
-    fullName: "Vikram Malhotra",
-    phoneNumber: "7654321098",
-    email: "vikram.malhotra@example.com",
-    income: "950000",
-    city: "Mumbai",
-    state: "Maharashtra",
-    loanAmount: "550000",
-    status: "Approved",
-    createdAt: "2023-08-05T09:45:00Z"
-  },
-  {
-    id: 4,
-    fullName: "Meena Patel",
-    phoneNumber: "6543210987",
-    email: "meena.patel@example.com",
-    income: "1200000",
-    city: "Ahmedabad",
-    state: "Gujarat",
-    loanAmount: "1200000",
-    status: "Rejected",
-    createdAt: "2023-08-01T11:20:00Z"
-  },
-  {
-    id: 5,
-    fullName: "Rajesh Khanna",
-    phoneNumber: "9876543211",
-    email: "rajesh.khanna@example.com",
-    income: "750000",
-    city: "Pune",
-    state: "Maharashtra",
-    loanAmount: "500000",
-    status: "Approved",
-    createdAt: "2023-07-28T10:30:00Z"
-  },
-  {
-    id: 6,
-    fullName: "Priya Singh",
-    phoneNumber: "8765432108",
-    email: "priya.singh@example.com",
-    income: "850000",
-    city: "Lucknow",
-    state: "Uttar Pradesh",
-    loanAmount: "600000",
-    status: "Pending",
-    createdAt: "2023-07-25T14:15:00Z"
-  },
-  {
-    id: 7,
-    fullName: "Mohan Reddy",
-    phoneNumber: "7654321097",
-    email: "mohan.reddy@example.com",
-    income: "950000",
-    city: "Hyderabad",
-    state: "Telangana",
-    loanAmount: "800000",
-    status: "Rejected",
-    createdAt: "2023-07-20T09:45:00Z"
-  },
-  {
-    id: 8,
-    fullName: "Ananya Das",
-    phoneNumber: "6543210986",
-    email: "ananya.das@example.com",
-    income: "700000",
-    city: "Kolkata",
-    state: "West Bengal",
-    loanAmount: "450000",
-    status: "Approved",
-    createdAt: "2023-07-15T11:20:00Z"
-  }
-];
 
 // Styles using inline CSS
 const styles = {
@@ -424,6 +325,33 @@ export default function LeadHistory() {
     }
   };
 
+  // Add this function after the formatDate and getStatusStyle functions
+  const handleViewLead = (lead: Lead) => {
+    // Store lead data in localStorage before navigation
+    localStorage.setItem(`lead_${lead.id}_fullName`, lead.fullName);
+    localStorage.setItem(`lead_${lead.id}_phoneNumber`, lead.phoneNumber || "");
+    localStorage.setItem(`lead_${lead.id}_email`, lead.email || "");
+    localStorage.setItem(`lead_${lead.id}_income`, lead.income || "");
+    localStorage.setItem(`lead_${lead.id}_city`, lead.city || "");
+    localStorage.setItem(`lead_${lead.id}_state`, lead.state || "");
+    localStorage.setItem(`lead_${lead.id}_loanAmount`, lead.loanAmount || "");
+    localStorage.setItem(`lead_${lead.id}_status`, lead.status || "");
+    localStorage.setItem(`lead_${lead.id}_createdAt`, lead.createdAt || "");
+    localStorage.setItem(`lead_${lead.id}_updatedAt`, lead.createdAt || ""); // Also store updated date
+    localStorage.setItem(`lead_${lead.id}_agentName`, localStorage.getItem("userName") || "");
+    localStorage.setItem(`lead_${lead.id}_agentId`, localStorage.getItem("userId") || "");
+    
+    // Store default values for additional fields
+    localStorage.setItem(`lead_${lead.id}_panCard`, "ABCDE1234F");
+    localStorage.setItem(`lead_${lead.id}_gender`, "Male");
+    localStorage.setItem(`lead_${lead.id}_dob`, "1990-01-01");
+    localStorage.setItem(`lead_${lead.id}_address`, "123 Main Street, City Center");
+    localStorage.setItem(`lead_${lead.id}_pincode`, "500001");
+    localStorage.setItem(`lead_${lead.id}_employmentType`, "Salaried");
+    
+    router.push(`/agent/lead-details/${lead.id}`);
+  };
+
   if (loading) {
     return (
       <div style={styles.pageWrapper}>
@@ -546,12 +474,21 @@ export default function LeadHistory() {
                         {formatDate(lead.createdAt)}
                       </td>
                       <td style={styles.td}>
-                        <Link 
-                          href={`/agent/lead-details/${lead.id}`}
-                          style={styles.viewLink}
+                        <button
+                          onClick={() => handleViewLead(lead)}
+                          style={{
+                            color: "#4f46e5",
+                            textDecoration: "none",
+                            fontWeight: "500",
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            cursor: "pointer", 
+                            fontSize: "inherit"
+                          }}
                         >
                           View Details
-                        </Link>
+                        </button>
                       </td>
                     </tr>
                   ))}

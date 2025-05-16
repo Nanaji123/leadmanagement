@@ -75,6 +75,7 @@ interface Lead {
   id: number;
   full_name: string;
   phoneNumber: string;
+  phone_number?: string;
   email: string;
   income: string;
   city: string;
@@ -82,6 +83,12 @@ interface Lead {
   loan_requirement: string;
   status: string;
   created_at: string;
+  pan_card?: string;
+  gender?: string;
+  dob?: string;
+  address?: string;
+  pincode?: string;
+  employment_type?: string;
 }
 
 // Stats calculation functions
@@ -270,6 +277,30 @@ useEffect(() => {
 
   const formatCurrency = (amount: number) => {
     return "₹" + amount.toLocaleString();
+  };
+
+  const handleViewLead = (lead: Lead) => {
+    // Store lead data in localStorage before navigation
+    localStorage.setItem(`lead_${lead.id}_fullName`, lead.full_name);
+    localStorage.setItem(`lead_${lead.id}_phoneNumber`, lead.phone_number || lead.phoneNumber || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_email`, lead.email || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_income`, lead.income || "0");
+    localStorage.setItem(`lead_${lead.id}_city`, lead.city || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_state`, lead.state || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_loanAmount`, lead.loan_requirement || "0");
+    localStorage.setItem(`lead_${lead.id}_status`, lead.status || "Pending");
+    localStorage.setItem(`lead_${lead.id}_createdAt`, lead.created_at || new Date().toISOString());
+    localStorage.setItem(`lead_${lead.id}_updatedAt`, lead.created_at || new Date().toISOString()); // Use created_at as fallback
+    
+    // Store additional data only if it exists in the API data
+    if (lead.pan_card) localStorage.setItem(`lead_${lead.id}_panCard`, lead.pan_card);
+    if (lead.gender) localStorage.setItem(`lead_${lead.id}_gender`, lead.gender);
+    if (lead.dob) localStorage.setItem(`lead_${lead.id}_dob`, lead.dob);
+    if (lead.address) localStorage.setItem(`lead_${lead.id}_address`, lead.address);
+    if (lead.pincode) localStorage.setItem(`lead_${lead.id}_pincode`, lead.pincode);
+    if (lead.employment_type) localStorage.setItem(`lead_${lead.id}_employmentType`, lead.employment_type);
+    
+    router.push(`/admin/lead-details/${lead.id}`);
   };
 
   return (
@@ -1055,7 +1086,7 @@ useEffect(() => {
                           <div style={{
                             fontSize: "0.875rem",
                             color: "#1e293b",
-                          }}>{lead.phoneNumber}</div>
+                          }}>{lead.phone_number || lead.phoneNumber || "Not Available"}</div>
                           <div style={{
                             fontSize: "0.75rem",
                             color: "#64748b",
@@ -1131,33 +1162,22 @@ useEffect(() => {
                           whiteSpace: "nowrap",
                           textAlign: "center",
                         }}>
-                          <Link 
-                            href={`/admin/lead-details/${lead.id}`}
+                          <button
+                            onClick={() => handleViewLead(lead)}
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.5rem",
-                              padding: "0.5rem 0.75rem",
-                              borderRadius: "0.375rem",
+                              padding: "0.375rem 0.75rem",
                               backgroundColor: "#4f46e5",
                               color: "white",
+                              fontWeight: "500",
                               fontSize: "0.75rem",
-                              fontWeight: "600",
+                              borderRadius: "0.375rem",
+                              border: "none",
                               cursor: "pointer",
-                              transition: "all 0.2s ease",
-                              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
                               textDecoration: "none",
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = "#4338ca";
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = "#4f46e5";
                             }}
                           >
                             View Profile
-                          </Link>
+                          </button>
                         </td>
                       </tr>
                     ))}

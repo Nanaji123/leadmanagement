@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-import { updateLeadStatus } from "@/services/leadService";
+import { getLead, updateLeadStatus } from "@/services/leadService";
 // Styles using inline CSS
 const styles = {
   pageWrapper: {
@@ -114,13 +114,13 @@ const styles = {
     marginTop: "1rem",
   },
   timelineItem: {
-    position: "relative",
+    position: "relative" as const,
     paddingLeft: "2rem",
     paddingBottom: "1.5rem",
     borderLeft: "2px solid #e2e8f0",
   },
   timelineDot: {
-    position: "absolute",
+    position: "absolute" as const,
     left: "-0.5rem",
     top: "0",
     width: "1rem",
@@ -175,7 +175,7 @@ const styles = {
     fontSize: "0.875rem",
     color: "#1e293b",
     backgroundColor: "white",
-    appearance: "none",
+    appearance: "none" as const,
     backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
     backgroundPosition: "right 0.5rem center",
     backgroundRepeat: "no-repeat",
@@ -192,7 +192,7 @@ const styles = {
     color: "#1e293b",
     backgroundColor: "white",
     minHeight: "6rem",
-    resize: "vertical",
+    resize: "vertical" as const,
   },
   button: {
     display: "inline-flex",
@@ -279,56 +279,6 @@ const styles = {
   }
 };
 
-// Mock data for a specific lead
-const getMockLead = (id: string) => ({
-  id: parseInt(id),
-  fullName: "Vikram Malhotra",
-  phoneNumber: "7654321098",
-  email: "vikram.malhotra@example.com",
-  income: "950000",
-  panCard: "ABCPD1234H",
-  gender: "Male",
-  dob: "1985-06-15",
-  address: "12-A, Bandra West",
-  city: "Mumbai",
-  state: "Maharashtra",
-  pincode: "400050",
-  employmentType: "Salaried",
-  loanAmount: "550000",
-  status: "Approved",
-  agentName: "Amit Kumar",
-  agentId: 103,
-  createdAt: "2023-08-05T09:45:00Z",
-  updatedAt: "2023-08-06T11:30:00Z",
-  statusHistory: [
-    {
-      status: "New",
-      date: "2023-08-05T09:45:00Z",
-      by: "Amit Kumar (Agent)",
-      notes: "Lead created"
-    },
-    {
-      status: "Pending",
-      date: "2023-08-05T14:20:00Z",
-      by: "System",
-      notes: "Scheduled for review"
-    },
-    {
-      status: "Approved",
-      date: "2023-08-06T11:30:00Z",
-      by: "Admin",
-      notes: "All documents verified. Customer eligible for loan."
-    }
-  ],
-  notes: [
-    {
-      text: "Customer has good credit history. Previously had a car loan which was repaid on time.",
-      by: "Admin",
-      date: "2023-08-06T10:15:00Z"
-    }
-  ]
-});
-
 export default function LeadDetails() {
   const router = useRouter();
   const params = useParams();
@@ -354,24 +304,128 @@ export default function LeadDetails() {
       return;
     }
     
-    // In a real app, fetch lead data from API
-    // Using mock data for demo
+    // Fetch lead data from API
+    const fetchLeadData = async () => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      setTimeout(() => {
-        if (id) {
-          const mockLead = getMockLead(id);
-          setLead(mockLead);
-          setNewStatus(mockLead.status);
+        if (!id) {
+          setError("Invalid lead ID");
+          setLoading(false);
+          return;
         }
-        setLoading(false);
-      }, 500);
-    } catch (err) {
-      setError("Failed to load lead data");
+        
+        console.log("Fetching lead details for ID:", id);
+        
+        // First try to get the data from API
+        try {
+          console.log("Attempting to fetch from API");
+          const apiLead = await getLead(id as string);
+          console.log("API data received:", apiLead);
+          console.log("Phone number from API:", apiLead.phone_number || apiLead.phoneNumber);
+          
+          if (apiLead) {
+            const mappedLead = {
+              id: apiLead.id,
+              fullName: apiLead.full_name || apiLead.fullName || "Not provided",
+              phoneNumber: apiLead.phone_number || apiLead.phoneNumber || "Not provided",
+              email: apiLead.email || "Not provided",
+              income: apiLead.income || "0",
+              city: apiLead.city || "Not provided",
+              state: apiLead.state || "Not provided", 
+              loanAmount: apiLead.loan_requirement || apiLead.loanAmount || "0",
+              status: apiLead.status || "Pending",
+              agentName: apiLead.agent_name || apiLead.agentName || "Not provided",
+              agentId: apiLead.agent_id || apiLead.agentId || "0",
+              createdAt: apiLead.created_at || apiLead.createdAt || new Date().toISOString(),
+              updatedAt: apiLead.updated_at || apiLead.updatedAt || new Date().toISOString(),
+              panCard: apiLead.pan_card || apiLead.panCard || "Not provided",
+              gender: apiLead.gender || "Not provided",
+              dob: apiLead.dob || "Not provided", 
+              address: apiLead.address || "Not provided",
+              pincode: apiLead.pincode || "Not provided",
+              employmentType: apiLead.employment_type || apiLead.employmentType || "Not provided",
+              statusHistory: apiLead.status_history || apiLead.statusHistory || [
+                {
+                  status: "New",
+                  date: apiLead.created_at || apiLead.createdAt || new Date().toISOString(),
+                  by: "System",
+                  notes: "Lead created"
+                }
+              ],
+              notes: apiLead.notes || []
+            };
+            
+            console.log("Setting lead data from API:", mappedLead);
+            setLead(mappedLead);
+            setNewStatus(mappedLead.status);
+            setLoading(false);
+            return;
+          }
+        } catch (apiError) {
+          console.error("API call failed:", apiError);
+          // Continue to try localStorage as fallback
+        }
+        
+        // If API call failed, use data from localStorage
+        const storedName = localStorage.getItem(`lead_${id}_fullName`);
+        console.log("Looking for data in localStorage, found name:", storedName);
+        console.log("Phone number from localStorage:", localStorage.getItem(`lead_${id}_phoneNumber`));
+        
+        if (storedName) {
+          // We have data in localStorage, use it
+          const leadData = {
+            id: parseInt(id as string),
+            fullName: storedName,
+            phoneNumber: localStorage.getItem(`lead_${id}_phoneNumber`) || "Not provided",
+            email: localStorage.getItem(`lead_${id}_email`) || "Not provided",
+            income: localStorage.getItem(`lead_${id}_income`) || "0",
+            city: localStorage.getItem(`lead_${id}_city`) || "Not provided",
+            state: localStorage.getItem(`lead_${id}_state`) || "Not provided",
+            loanAmount: localStorage.getItem(`lead_${id}_loanAmount`) || "0",
+            status: localStorage.getItem(`lead_${id}_status`) || "Pending",
+            agentName: localStorage.getItem(`lead_${id}_agentName`) || "Not provided",
+            agentId: localStorage.getItem(`lead_${id}_agentId`) || "0",
+            createdAt: localStorage.getItem(`lead_${id}_createdAt`) || new Date().toISOString(),
+            updatedAt: localStorage.getItem(`lead_${id}_updatedAt`) || new Date().toISOString(),
+            panCard: localStorage.getItem(`lead_${id}_panCard`) || "Not provided",
+            gender: localStorage.getItem(`lead_${id}_gender`) || "Not provided",
+            dob: localStorage.getItem(`lead_${id}_dob`) || "Not provided",
+            address: localStorage.getItem(`lead_${id}_address`) || "Not provided",
+            pincode: localStorage.getItem(`lead_${id}_pincode`) || "Not provided",
+            employmentType: localStorage.getItem(`lead_${id}_employmentType`) || "Not provided",
+            statusHistory: [
+              {
+                status: "New",
+                date: localStorage.getItem(`lead_${id}_createdAt`) || new Date().toISOString(),
+                by: "Agent",
+                notes: "Lead created"
+              },
+              {
+                status: localStorage.getItem(`lead_${id}_status`) || "Pending",
+                date: localStorage.getItem(`lead_${id}_updatedAt`) || new Date().toISOString(),
+                by: "System",
+                notes: "Status updated"
+              }
+            ],
+            notes: []
+          };
+          
+          console.log("Setting lead data from localStorage:", leadData);
+          setLead(leadData);
+          setNewStatus(leadData.status);
+        } else {
+          setError("Lead data not found. Please go back and try again.");
+        }
+      } catch (err) {
+        console.error("Failed to load lead data:", err);
+        setError("Failed to load lead data. Please try again.");
+      } finally {
       setLoading(false);
     }
+    };
+    
+    fetchLeadData();
     
     // Handle responsive behavior
     const checkIfMobile = () => {
@@ -423,7 +477,7 @@ export default function LeadDetails() {
   };
 
   // Handle status update form submission
-  const handleUpdateStatus = (e: React.FormEvent) => {
+  const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -434,8 +488,6 @@ export default function LeadDetails() {
       return;
     }
     
-    // In a real app, send API request to update lead status
-    // Simulating API call
     try {
       // Add to status history
       const now = new Date().toISOString();
@@ -446,12 +498,24 @@ export default function LeadDetails() {
         notes: newNote || `Status updated to ${newStatus}`
       };
       
+      // Try to update status via API
+      try {
+        await updateLeadStatus(id, newStatus, newNote);
+      } catch (apiError) {
+        console.error("API update failed, using local update:", apiError);
+      }
+      
+      // Update local state
       setLead({
         ...lead,
         status: newStatus,
         updatedAt: now,
         statusHistory: [newStatusEntry, ...lead.statusHistory]
       });
+      
+      // Update localStorage
+      localStorage.setItem(`lead_${id}_status`, newStatus);
+      localStorage.setItem(`lead_${id}_updatedAt`, now);
       
       // Clear note field after successful update
       setNewNote("");
@@ -539,7 +603,7 @@ export default function LeadDetails() {
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Phone Number</div>
-                <div style={styles.detailValue}>{lead.phoneNumber}</div>
+                <div style={styles.detailValue}>{lead.phone_number || lead.phoneNumber || "Not provided"}</div>
               </div>
               
               <div style={styles.detailItem}>
@@ -549,17 +613,17 @@ export default function LeadDetails() {
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>PAN Card</div>
-                <div style={styles.detailValue}>{lead.panCard}</div>
+                <div style={styles.detailValue}>{lead.panCard || "Not provided"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Gender</div>
-                <div style={styles.detailValue}>{lead.gender}</div>
+                <div style={styles.detailValue}>{lead.gender || "Not provided"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Date of Birth</div>
-                <div style={styles.detailValue}>{formatDate(lead.dob)}</div>
+                <div style={styles.detailValue}>{lead.dob ? formatDate(lead.dob) : "Not provided"}</div>
               </div>
             </div>
           </div>
@@ -574,7 +638,7 @@ export default function LeadDetails() {
             <div style={styles.detailsGrid}>
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Address</div>
-                <div style={styles.detailValue}>{lead.address}</div>
+                <div style={styles.detailValue}>{lead.address || "Not provided"}</div>
               </div>
               
               <div style={styles.detailItem}>
@@ -589,7 +653,7 @@ export default function LeadDetails() {
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Pincode</div>
-                <div style={styles.detailValue}>{lead.pincode}</div>
+                <div style={styles.detailValue}>{lead.pincode || "Not provided"}</div>
               </div>
             </div>
           </div>
@@ -611,13 +675,13 @@ export default function LeadDetails() {
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Employment Type</div>
-                <div style={styles.detailValue}>{lead.employmentType}</div>
+                <div style={styles.detailValue}>{lead.employmentType || lead.employment_type || "Not provided"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Loan Amount</div>
                 <div style={styles.detailValueLarge}>
-                  ₹{parseInt(lead.loanAmount).toLocaleString('en-IN')}
+                  ₹{parseInt(lead.loanAmount || lead.loan_requirement || "0").toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
@@ -661,7 +725,7 @@ export default function LeadDetails() {
           </div>
           <div style={styles.sectionBody}>
             <div style={styles.timeline}>
-              {lead.statusHistory.map((history: any, index: number) => (
+              {lead.statusHistory && lead.statusHistory.map((history: any, index: number) => (
                 <div key={index} style={styles.timelineItem}>
                   <div style={styles.timelineDot}></div>
                   <div style={styles.timelineContent}>
@@ -690,6 +754,12 @@ export default function LeadDetails() {
                   </div>
                 </div>
               ))}
+
+              {(!lead.statusHistory || lead.statusHistory.length === 0) && (
+                <div style={{padding: "1rem", color: "#6b7280", fontSize: "0.875rem"}}>
+                  No status history available.
+                </div>
+              )}
             </div>
             
             {/* Status Update Form */}

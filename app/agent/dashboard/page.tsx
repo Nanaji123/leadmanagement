@@ -5,48 +5,30 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import { getLeadsByUser } from "@/services/leadService";
-// Mock data for agent stats
-const MOCK_AGENT_STATS = {
-  totalLeads: 28,
-  leadsPending: 5,
-  leadsApproved: 18,
-  leadsRejected: 5,
-  conversionRate: 64, // percentage
-  lastMonthLeads: 12,
-  thisMonthLeads: 16
-};
 
-// Mock data for recent leads
-const MOCK_RECENT_LEADS = [
-  {
-    id: 1,
-    fullName: "Anil Kumar",
-    createdAt: "2023-08-10T10:30:00Z",
-    status: "Approved",
-    loanAmount: "450000"
-  },
-  {
-    id: 2,
-    fullName: "Sunita Sharma",
-    createdAt: "2023-08-08T14:15:00Z",
-    status: "Pending",
-    loanAmount: "750000"
-  },
-  {
-    id: 3,
-    fullName: "Vikram Malhotra",
-    createdAt: "2023-08-05T09:45:00Z",
-    status: "Approved",
-    loanAmount: "550000"
-  },
-  {
-    id: 4,
-    fullName: "Meena Patel",
-    createdAt: "2023-08-01T11:20:00Z",
-    status: "Rejected",
-    loanAmount: "1200000"
-  }
-];
+// Define types for stats and leads
+interface AgentStats {
+  totalLeads: number;
+  leadsPending: number;
+  leadsApproved: number;
+  leadsRejected: number;
+  conversionRate: number;
+  lastMonthLeads: number;
+  thisMonthLeads: number;
+}
+
+interface RecentLead {
+  id: number;
+  fullName: string;
+  createdAt: string;
+  status: string;
+  loanAmount: string;
+  phoneNumber?: string;
+  email?: string;
+  city?: string;
+  state?: string;
+  income?: string;
+}
 
 // Styles for the dashboard
 const styles = {
@@ -240,12 +222,20 @@ const styles = {
 export default function AgentDashboard() {
   const router = useRouter();
   const [agent, setAgent] = useState({ name: "Agent" });
-  const [stats, setStats] = useState(MOCK_AGENT_STATS);
-  const [recentLeads, setRecentLeads] = useState(MOCK_RECENT_LEADS);
+  const [stats, setStats] = useState<AgentStats>({
+    totalLeads: 0,
+    leadsPending: 0,
+    leadsApproved: 0,
+    leadsRejected: 0,
+    conversionRate: 0,
+    lastMonthLeads: 0,
+    thisMonthLeads: 0
+  });
+  const [recentLeads, setRecentLeads] = useState<RecentLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
     const token = localStorage.getItem("authToken");
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("userId");
@@ -269,6 +259,11 @@ export default function AgentDashboard() {
         const mappedLeads = apiLeads.map((lead: any) => ({
           id: lead.id,
           fullName: lead.full_name,
+          phoneNumber: lead.phone_number || lead.phoneNumber || "",
+          email: lead.email || "",
+          income: lead.income || "",
+          city: lead.city || "",
+          state: lead.state || "",
           createdAt: lead.created_at,
           status: lead.status.charAt(0).toUpperCase() + lead.status.slice(1),
           loanAmount: lead.loan_requirement?.toString() ?? "",
@@ -356,6 +351,33 @@ export default function AgentDashboard() {
       default:
         return {};
     }
+  };
+
+  // Update handleViewLead function to match the mappedLeads format
+  const handleViewLead = (lead: any) => {
+    // Store lead data in localStorage before navigation
+    localStorage.setItem(`lead_${lead.id}_fullName`, lead.fullName || "Unknown");
+    localStorage.setItem(`lead_${lead.id}_phoneNumber`, lead.phoneNumber || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_email`, lead.email || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_income`, lead.income || "0");
+    localStorage.setItem(`lead_${lead.id}_city`, lead.city || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_state`, lead.state || "Not Available");
+    localStorage.setItem(`lead_${lead.id}_loanAmount`, lead.loanAmount || "0");
+    localStorage.setItem(`lead_${lead.id}_status`, lead.status || "Pending");
+    localStorage.setItem(`lead_${lead.id}_createdAt`, lead.createdAt || new Date().toISOString());
+    localStorage.setItem(`lead_${lead.id}_updatedAt`, lead.updatedAt || lead.createdAt || new Date().toISOString());
+    localStorage.setItem(`lead_${lead.id}_agentName`, localStorage.getItem("userName") || "Agent");
+    localStorage.setItem(`lead_${lead.id}_agentId`, localStorage.getItem("userId") || "0");
+    
+    // Store default values for additional fields
+    localStorage.setItem(`lead_${lead.id}_panCard`, lead.panCard || "ABCDE1234F");
+    localStorage.setItem(`lead_${lead.id}_gender`, lead.gender || "Male");
+    localStorage.setItem(`lead_${lead.id}_dob`, lead.dob || "1990-01-01");
+    localStorage.setItem(`lead_${lead.id}_address`, lead.address || "123 Main Street, City Center");
+    localStorage.setItem(`lead_${lead.id}_pincode`, lead.pincode || "500001");
+    localStorage.setItem(`lead_${lead.id}_employmentType`, lead.employmentType || "Salaried");
+    
+    router.push(`/agent/lead-details/${lead.id}`);
   };
 
   if (loading) {
@@ -548,20 +570,25 @@ export default function AgentDashboard() {
                       ₹{parseInt(lead.loanAmount).toLocaleString('en-IN')}
                     </td>
                     <td style={{...styles.td, padding: "1.25rem 1.75rem"}}>
-                      <Link 
-                        href={`/agent/lead-details/${lead.id}`}
+                      <button 
+                        onClick={() => handleViewLead(lead)}
                         style={{
                           color: "#4f46e5",
                           textDecoration: "none",
                           fontWeight: "600",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "0.25rem"
+                          gap: "0.25rem",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          fontSize: "inherit"
                         }}
                       >
                         View Details
                         <span style={{fontSize: "0.9rem"}}>→</span>
-                      </Link>
+                      </button>
                     </td>
                   </tr>
                 ))}

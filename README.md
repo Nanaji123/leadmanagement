@@ -43,12 +43,12 @@ A simple role-based web application for submitting and managing sales leads.
 
 3. Run the development server:
    ```
-   npm run dev
+npm run dev
    ```
    or
    ```
-   yarn dev
-   ```
+yarn dev
+```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 

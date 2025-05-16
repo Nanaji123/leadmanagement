@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-import { updateLeadStatus } from "@/services/leadService";
+import { getLead, updateLeadStatus } from "@/services/leadService";
 // Styles using inline CSS
 const styles = {
   pageWrapper: {
@@ -64,6 +64,14 @@ const styles = {
     backgroundColor: "rgba(239, 68, 68, 0.1)",
     color: "#ef4444",
   },
+  statusNew: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    color: "#3b82f6",
+  },
+  statusInReview: {
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    color: "#f59e0b",
+  },
   card: {
     background: "white",
     borderRadius: "0.75rem",
@@ -114,13 +122,13 @@ const styles = {
     marginTop: "1rem",
   },
   timelineItem: {
-    position: "relative",
+    position: "relative" as const,
     paddingLeft: "2rem",
     paddingBottom: "1.5rem",
     borderLeft: "2px solid #e2e8f0",
   },
   timelineDot: {
-    position: "absolute",
+    position: "absolute" as const,
     left: "-0.5rem",
     top: "0",
     width: "1rem",
@@ -175,7 +183,7 @@ const styles = {
     fontSize: "0.875rem",
     color: "#1e293b",
     backgroundColor: "white",
-    appearance: "none",
+    appearance: "none" as const,
     backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
     backgroundPosition: "right 0.5rem center",
     backgroundRepeat: "no-repeat",
@@ -192,7 +200,7 @@ const styles = {
     color: "#1e293b",
     backgroundColor: "white",
     minHeight: "6rem",
-    resize: "vertical",
+    resize: "vertical" as const,
   },
   button: {
     display: "inline-flex",
@@ -279,56 +287,6 @@ const styles = {
   }
 };
 
-// Mock data for a specific lead
-const getMockLead = (id: string) => ({
-  id: parseInt(id),
-  fullName: "Vikram Malhotra",
-  phoneNumber: "7654321098",
-  email: "vikram.malhotra@example.com",
-  income: "950000",
-  panCard: "ABCPD1234H",
-  gender: "Male",
-  dob: "1985-06-15",
-  address: "12-A, Bandra West",
-  city: "Mumbai",
-  state: "Maharashtra",
-  pincode: "400050",
-  employmentType: "Salaried",
-  loanAmount: "550000",
-  status: "Approved",
-  agentName: "Amit Kumar",
-  agentId: 103,
-  createdAt: "2023-08-05T09:45:00Z",
-  updatedAt: "2023-08-06T11:30:00Z",
-  statusHistory: [
-    {
-      status: "New",
-      date: "2023-08-05T09:45:00Z",
-      by: "Amit Kumar (Agent)",
-      notes: "Lead created"
-    },
-    {
-      status: "Pending",
-      date: "2023-08-05T14:20:00Z",
-      by: "System",
-      notes: "Scheduled for review"
-    },
-    {
-      status: "Approved",
-      date: "2023-08-06T11:30:00Z",
-      by: "Admin",
-      notes: "All documents verified. Customer eligible for loan."
-    }
-  ],
-  notes: [
-    {
-      text: "Customer has good credit history. Previously had a car loan which was repaid on time.",
-      by: "Admin",
-      date: "2023-08-06T10:15:00Z"
-    }
-  ]
-});
-
 export default function LeadDetails() {
   const router = useRouter();
   const params = useParams();
@@ -354,24 +312,24 @@ export default function LeadDetails() {
       return;
     }
     
-    // In a real app, fetch lead data from API
-    // Using mock data for demo
-    setLoading(true);
-    
-    try {
-      // Simulate API call delay
-      setTimeout(() => {
-        if (id) {
-          const mockLead = getMockLead(id);
-          setLead(mockLead);
-          setNewStatus(mockLead.status);
-        }
+    // Fetch lead data from API
+    const fetchLead = async () => {
+      setLoading(true);
+      setError("");
+      
+      try {
+        const leadData = await getLead(id);
+        setLead(leadData);
+        setNewStatus(leadData.status);
         setLoading(false);
-      }, 500);
-    } catch (err) {
-      setError("Failed to load lead data");
-      setLoading(false);
-    }
+      } catch (err) {
+        console.error("Error fetching lead:", err);
+        setError("Failed to load lead data");
+        setLoading(false);
+      }
+    };
+    
+    fetchLead();
     
     // Handle responsive behavior
     const checkIfMobile = () => {
@@ -394,9 +352,12 @@ export default function LeadDetails() {
       case "Approved":
         return styles.statusApproved;
       case "Pending":
-        return styles.statusPending;
+      case "In Review":
+        return styles.statusInReview;
       case "Rejected":
         return styles.statusRejected;
+      case "New":
+        return styles.statusNew;
       default:
         return {};
     }
@@ -404,6 +365,7 @@ export default function LeadDetails() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
@@ -413,6 +375,7 @@ export default function LeadDetails() {
 
   // Format datetime for display
   const formatDateTime = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString('en-IN', {
       day: 'numeric',
       month: 'short',
@@ -423,7 +386,7 @@ export default function LeadDetails() {
   };
 
   // Handle status update form submission
-  const handleUpdateStatus = (e: React.FormEvent) => {
+  const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -434,23 +397,26 @@ export default function LeadDetails() {
       return;
     }
     
-    // In a real app, send API request to update lead status
-    // Simulating API call
     try {
-      // Add to status history
+      // Send API request to update lead status
+      await updateLeadStatus(id, newStatus, newNote);
+      
+      // Update local state with new status
       const now = new Date().toISOString();
+      const adminName = localStorage.getItem("userName") || "Admin";
+      
       const newStatusEntry = {
         status: newStatus,
-        date: now,
-        by: "Admin",
+        created_at: now,
+        user_name: adminName,
         notes: newNote || `Status updated to ${newStatus}`
       };
       
       setLead({
         ...lead,
         status: newStatus,
-        updatedAt: now,
-        statusHistory: [newStatusEntry, ...lead.statusHistory]
+        updated_at: now,
+        status_history: [newStatusEntry, ...(lead.status_history || [])]
       });
       
       // Clear note field after successful update
@@ -462,6 +428,7 @@ export default function LeadDetails() {
         setSuccess("");
       }, 3000);
     } catch (err) {
+      console.error("Error updating status:", err);
       setError("Failed to update lead status");
     }
   };
@@ -475,7 +442,35 @@ export default function LeadDetails() {
           marginLeft: isMobile ? "0" : "250px",
           width: isMobile ? "100%" : "calc(100% - 250px)"
         }}>
-          <p>Loading lead details...</p>
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center", 
+            minHeight: "60vh"
+          }}>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem"
+            }}>
+              <div style={{
+                display: "inline-block",
+                width: "2rem",
+                height: "2rem",
+                border: "3px solid #e2e8f0",
+                borderTopColor: "#4f46e5",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}></div>
+              <style jsx>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+              <p style={{ color: "#64748b", fontSize: "0.875rem" }}>Loading lead details...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -493,7 +488,24 @@ export default function LeadDetails() {
           <Link href="/admin/all-leads" style={styles.backLink}>
             ← Back to All Leads
           </Link>
-          <p>Lead not found</p>
+          <div style={{
+            textAlign: "center",
+            padding: "2rem",
+            backgroundColor: "white",
+            borderRadius: "0.75rem",
+            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
+            marginTop: "2rem"
+          }}>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem", color: "#cbd5e1" }}>🔍</div>
+            <h2 style={{ color: "#1e293b", marginBottom: "0.5rem" }}>Lead Not Found</h2>
+            <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>The lead you're looking for doesn't exist or you don't have permission to view it.</p>
+            <Link href="/admin/all-leads" style={{
+              ...styles.button,
+              textDecoration: "none",
+            }}>
+              Return to All Leads
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -522,7 +534,7 @@ export default function LeadDetails() {
         </h1>
         
         <p style={styles.subtitle}>
-          Lead #{lead.id} | Submitted by {lead.agentName} on {formatDate(lead.createdAt)}
+          Lead #{lead.id} | Submitted on {formatDate(lead.created_at)}
         </p>
         
         {/* Personal Information Card */}
@@ -534,32 +546,22 @@ export default function LeadDetails() {
             <div style={styles.detailsGrid}>
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Full Name</div>
-                <div style={styles.detailValueLarge}>{lead.fullName}</div>
+                <div style={styles.detailValueLarge}>{lead.full_name || lead.fullName || "N/A"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Phone Number</div>
-                <div style={styles.detailValue}>{lead.phoneNumber}</div>
+                <div style={styles.detailValue}>{lead.phoneNumber || "N/A"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Email</div>
-                <div style={styles.detailValue}>{lead.email}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>PAN Card</div>
-                <div style={styles.detailValue}>{lead.panCard}</div>
+                <div style={styles.detailValue}>{lead.email || "N/A"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Gender</div>
-                <div style={styles.detailValue}>{lead.gender}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Date of Birth</div>
-                <div style={styles.detailValue}>{formatDate(lead.dob)}</div>
+                <div style={styles.detailValue}>{lead.gender || "N/A"}</div>
               </div>
             </div>
           </div>
@@ -568,28 +570,18 @@ export default function LeadDetails() {
         {/* Address Information Card */}
         <div style={styles.card}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Address Information</h2>
+            <h2 style={styles.sectionTitle}>Location Information</h2>
           </div>
           <div style={styles.sectionBody}>
             <div style={styles.detailsGrid}>
               <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Address</div>
-                <div style={styles.detailValue}>{lead.address}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>City</div>
-                <div style={styles.detailValue}>{lead.city}</div>
+                <div style={styles.detailValue}>{lead.city || "N/A"}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>State</div>
-                <div style={styles.detailValue}>{lead.state}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Pincode</div>
-                <div style={styles.detailValue}>{lead.pincode}</div>
+                <div style={styles.detailValue}>{lead.state || "N/A"}</div>
               </div>
             </div>
           </div>
@@ -605,50 +597,15 @@ export default function LeadDetails() {
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Annual Income</div>
                 <div style={styles.detailValueLarge}>
-                  ₹{parseInt(lead.income).toLocaleString('en-IN')}
+                  ₹{parseInt(lead.income || "0").toLocaleString('en-IN')}
                 </div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Employment Type</div>
-                <div style={styles.detailValue}>{lead.employmentType}</div>
               </div>
               
               <div style={styles.detailItem}>
                 <div style={styles.detailLabel}>Loan Amount</div>
                 <div style={styles.detailValueLarge}>
-                  ₹{parseInt(lead.loanAmount).toLocaleString('en-IN')}
+                  ₹{parseInt(lead.loan_requirement || lead.loanAmount || "0").toLocaleString('en-IN')}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Agent Information Card */}
-        <div style={styles.card}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Agent Information</h2>
-          </div>
-          <div style={styles.sectionBody}>
-            <div style={styles.detailsGrid}>
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Agent Name</div>
-                <div style={styles.detailValue}>{lead.agentName}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Agent ID</div>
-                <div style={styles.detailValue}>{lead.agentId}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Submission Date</div>
-                <div style={styles.detailValue}>{formatDateTime(lead.createdAt)}</div>
-              </div>
-              
-              <div style={styles.detailItem}>
-                <div style={styles.detailLabel}>Last Updated</div>
-                <div style={styles.detailValue}>{formatDateTime(lead.updatedAt)}</div>
               </div>
             </div>
           </div>
@@ -661,35 +618,49 @@ export default function LeadDetails() {
           </div>
           <div style={styles.sectionBody}>
             <div style={styles.timeline}>
-              {lead.statusHistory.map((history: any, index: number) => (
-                <div key={index} style={styles.timelineItem}>
-                  <div style={styles.timelineDot}></div>
-                  <div style={styles.timelineContent}>
-                    <div style={styles.timelineStatus}>
-                      Status: <span style={{
-                        color: 
-                          history.status === "Approved" ? "#10b981" :
-                          history.status === "Pending" ? "#f59e0b" :
-                          history.status === "Rejected" ? "#ef4444" : 
-                          "#4b5563"
-                      }}>
-                        {history.status}
-                      </span>
-                    </div>
-                    <div style={styles.timelineDate}>
-                      {formatDateTime(history.date)}
-                    </div>
-                    <div style={styles.timelineBy}>
-                      By: {history.by}
-                    </div>
-                    {history.notes && (
-                      <div style={{marginTop: "0.5rem", fontSize: "0.875rem", color: "#4b5563"}}>
-                        {history.notes}
+              {lead.status_history && lead.status_history.length > 0 ? (
+                lead.status_history.map((history: any, index: number) => (
+                  <div key={index} style={styles.timelineItem}>
+                    <div style={styles.timelineDot}></div>
+                    <div style={styles.timelineContent}>
+                      <div style={styles.timelineStatus}>
+                        Status: <span style={{
+                          color: 
+                            history.status === "Approved" ? "#10b981" :
+                            history.status === "In Review" ? "#f59e0b" :
+                            history.status === "Rejected" ? "#ef4444" :
+                            history.status === "New" ? "#3b82f6" : 
+                            "#4b5563"
+                        }}>
+                          {history.status}
+                        </span>
                       </div>
-                    )}
+                      <div style={styles.timelineDate}>
+                        {formatDateTime(history.created_at)}
+                      </div>
+                      <div style={styles.timelineBy}>
+                        By: {history.user_name || "System"}
+                      </div>
+                      {history.notes && (
+                        <div style={{marginTop: "0.5rem", fontSize: "0.875rem", color: "#4b5563"}}>
+                          {history.notes}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div style={{
+                  padding: "1rem",
+                  backgroundColor: "#f8fafc",
+                  borderRadius: "0.5rem",
+                  textAlign: "center",
+                  color: "#64748b",
+                  fontSize: "0.875rem"
+                }}>
+                  No status history available
                 </div>
-              ))}
+              )}
             </div>
             
             {/* Status Update Form */}
@@ -711,7 +682,7 @@ export default function LeadDetails() {
                   >
                     <option value="">Select Status</option>
                     <option value="New">New</option>
-                    <option value="Pending">Pending</option>
+                    <option value="In Review">In Review</option>
                     <option value="Approved">Approved</option>
                     <option value="Rejected">Rejected</option>
                   </select>
@@ -752,26 +723,6 @@ export default function LeadDetails() {
           </div>
         </div>
         
-        {/* Notes Card */}
-        {lead.notes && lead.notes.length > 0 && (
-          <div style={styles.card}>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Notes</h2>
-            </div>
-            <div style={styles.sectionBody}>
-              {lead.notes.map((note: any, index: number) => (
-                <div key={index} style={styles.note}>
-                  <div style={styles.noteText}>{note.text}</div>
-                  <div style={styles.noteInfo}>
-                    <span>By: {note.by}</span>
-                    <span>{formatDateTime(note.date)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
         {/* Action Buttons */}
         <div style={styles.actionButtons}>
           <button 
@@ -786,22 +737,6 @@ export default function LeadDetails() {
             onClick={() => window.print()}
           >
             Print Details
-          </button>
-          
-          <button 
-            style={{...styles.button}}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#4338ca";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#4f46e5";
-            }}
-            onClick={() => {
-              // In a real app, navigate to edit page
-              alert("Edit functionality would be implemented here");
-            }}
-          >
-            Edit Lead
           </button>
         </div>
       </div>

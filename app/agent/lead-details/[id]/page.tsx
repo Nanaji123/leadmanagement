@@ -4,57 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
-
-// Mock lead data (would come from API in real application)
-const MOCK_LEADS = [
-  {
-    id: 1,
-    fullName: "Anil Kumar",
-    phoneNumber: "9876543210",
-    email: "anil.kumar@example.com",
-    income: "650000",
-    city: "Bangalore",
-    state: "Karnataka",
-    loanAmount: "450000",
-    status: "Approved",
-    createdAt: "2023-08-10T10:30:00Z",
-    panCard: "ABCDE1234F",
-    gender: "Male",
-    dob: "1985-05-15",
-    address: "123 MG Road, Indiranagar",
-    pincode: "560038",
-    employmentType: "Salaried",
-    notes: "Customer has good credit history and stable job.",
-    statusHistory: [
-      { status: "New", date: "2023-08-10T10:30:00Z", by: "John Doe (You)" },
-      { status: "In Review", date: "2023-08-11T14:20:00Z", by: "Admin" },
-      { status: "Approved", date: "2023-08-12T09:15:00Z", by: "Admin" }
-    ]
-  },
-  {
-    id: 2,
-    fullName: "Sunita Sharma",
-    phoneNumber: "8765432109",
-    email: "sunita.sharma@example.com",
-    income: "850000",
-    city: "Delhi",
-    state: "Delhi",
-    loanAmount: "750000",
-    status: "Pending",
-    createdAt: "2023-08-08T14:15:00Z",
-    panCard: "FGHIJ5678K",
-    gender: "Female",
-    dob: "1990-08-22",
-    address: "456 Connaught Place",
-    pincode: "110001",
-    employmentType: "Business Owner",
-    notes: "Customer has requested expedited processing.",
-    statusHistory: [
-      { status: "New", date: "2023-08-08T14:15:00Z", by: "John Doe (You)" },
-      { status: "In Review", date: "2023-08-09T11:30:00Z", by: "Admin" }
-    ]
-  }
-];
+import { getLead } from "@/services/leadService";
 
 // Styles using inline CSS
 const styles = {
@@ -121,6 +71,14 @@ const styles = {
   statusRejected: {
     backgroundColor: "rgba(239, 68, 68, 0.1)",
     color: "#ef4444"
+  },
+  statusNew: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    color: "#3b82f6"
+  },
+  statusInReview: {
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    color: "#f59e0b"
   },
   card: {
     background: "white",
@@ -260,36 +218,9 @@ const styles = {
   }
 };
 
-interface StatusHistory {
-  status: string;
-  date: string;
-  by: string;
-}
-
-interface Lead {
-  id: number;
-  fullName: string;
-  phoneNumber: string;
-  email: string;
-  income: string;
-  city: string;
-  state: string;
-  loanAmount: string;
-  status: string;
-  createdAt: string;
-  panCard: string;
-  gender: string;
-  dob: string;
-  address: string;
-  pincode: string;
-  employmentType: string;
-  notes?: string;
-  statusHistory: StatusHistory[];
-}
-
 export default function LeadDetails({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [lead, setLead] = useState<Lead | null>(null);
+  const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -315,25 +246,17 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
     // Add event listener
     window.addEventListener("resize", checkIfMobile);
     
-    // In a real app, fetch lead from API
-    // Using mock data for demo
-    const fetchLead = () => {
+    // Fetch lead from API
+    const fetchLead = async () => {
       setLoading(true);
+      setError("");
+      
       try {
-        // Simulate API call
-        setTimeout(() => {
-          const leadId = parseInt(params.id);
-          const foundLead = MOCK_LEADS.find(l => l.id === leadId);
-          
-          if (foundLead) {
-            setLead(foundLead);
-          } else {
-            setError("Lead not found");
-          }
-          
-          setLoading(false);
-        }, 500);
+        const leadData = await getLead(params.id);
+        setLead(leadData);
+        setLoading(false);
       } catch (err) {
+        console.error("Error fetching lead:", err);
         setError("Failed to load lead details");
         setLoading(false);
       }
@@ -347,6 +270,7 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
 
   // Format date for display
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
@@ -356,6 +280,7 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
 
   // Format time for display
   const formatDateTime = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString('en-IN', {
       day: 'numeric',
       month: 'short',
@@ -372,9 +297,11 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
         return styles.statusApproved;
       case "Pending":
       case "In Review":
-        return styles.statusPending;
+        return styles.statusInReview;
       case "Rejected":
         return styles.statusRejected;
+      case "New":
+        return styles.statusNew;
       default:
         return {};
     }
@@ -393,7 +320,35 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           marginLeft: isMobile ? "0" : "250px",
           width: isMobile ? "100%" : "calc(100% - 250px)"
         }}>
-          <div style={styles.loading}>Loading lead details...</div>
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center", 
+            minHeight: "60vh"
+          }}>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem"
+            }}>
+              <div style={{
+                display: "inline-block",
+                width: "2rem",
+                height: "2rem",
+                border: "3px solid #e2e8f0",
+                borderTopColor: "#4f46e5",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}></div>
+              <style jsx>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+              <p style={{ color: "#64748b", fontSize: "0.875rem" }}>Loading lead details...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -409,8 +364,8 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           width: isMobile ? "100%" : "calc(100% - 250px)"
         }}>
           <div style={styles.error}>{error || "Lead not found"}</div>
-          <Link href="/agent/lead-history" style={styles.backLink}>
-            <span>←</span> Back to Lead History
+          <Link href="/agent/dashboard" style={styles.backLink}>
+            <span>←</span> Back to Dashboard
           </Link>
         </div>
       </div>
@@ -447,39 +402,29 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           }}>
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Full Name</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.fullName}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.full_name || lead.fullName || "N/A"}</p>
             </div>
             
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Phone Number</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.phoneNumber}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.phoneNumber || "N/A"}</p>
             </div>
             
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Email</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.email}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.email || "N/A"}</p>
             </div>
             
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Gender</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.gender}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Date of Birth</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{formatDate(lead.dob)}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>PAN Card</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.panCard}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.gender || "N/A"}</p>
             </div>
           </div>
         </div>
         
         {/* Address Information */}
         <div style={{...styles.card, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)", marginTop: "1.5rem"}}>
-          <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Address Information</h2>
+          <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Location Information</h2>
           
           <div style={{
             display: "grid",
@@ -488,23 +433,13 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
             marginTop: "1rem"
           }}>
             <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Address</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.address}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>City</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.city}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.city || "N/A"}</p>
             </div>
             
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>State</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.state}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Pincode</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.pincode}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.state || "N/A"}</p>
             </div>
           </div>
         </div>
@@ -521,22 +456,17 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           }}>
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Income</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>₹{parseInt(lead.income).toLocaleString('en-IN')}</p>
-            </div>
-            
-            <div style={styles.infoGroup}>
-              <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Employment Type</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{lead.employmentType}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>₹{parseInt(lead.income || "0").toLocaleString('en-IN')}</p>
             </div>
             
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Loan Amount</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>₹{parseInt(lead.loanAmount).toLocaleString('en-IN')}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>₹{parseInt(lead.loan_requirement || lead.loanAmount || "0").toLocaleString('en-IN')}</p>
             </div>
             
             <div style={styles.infoGroup}>
               <p style={{...styles.infoLabel, color: "#64748b", fontSize: "0.8rem", fontWeight: "500"}}>Submission Date</p>
-              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{formatDate(lead.createdAt)}</p>
+              <p style={{...styles.infoValue, fontSize: "1rem", color: "#1e293b"}}>{formatDate(lead.created_at || lead.createdAt)}</p>
             </div>
           </div>
           
@@ -553,20 +483,36 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
           <h2 style={{...styles.sectionHeading, borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem"}}>Status History</h2>
           
           <div style={{...styles.timeline, paddingTop: "0.75rem"}}>
-            {lead.statusHistory.map((history, index) => (
-              <div key={index} style={{...styles.timelineItem, paddingLeft: "0.5rem"}}>
-                {index < lead.statusHistory.length - 1 && (
-                  <div style={{...styles.timelineLine, backgroundColor: "#e2e8f0"}}></div>
-                )}
-                <div style={{...styles.timelineDot, 
-                  backgroundColor: "#4f46e5", 
-                  boxShadow: "0 0 0 3px rgba(79, 70, 229, 0.2)"
-                }}></div>
-                <p style={{...styles.timelineStatus, fontSize: "0.95rem", fontWeight: "600", color: "#1e293b"}}>{history.status}</p>
-                <p style={{...styles.timelineDate, color: "#64748b"}}>{formatDateTime(history.date)}</p>
-                <p style={{...styles.timelineBy, color: "#64748b"}}>By: {history.by}</p>
+            {lead.status_history && lead.status_history.length > 0 ? (
+              lead.status_history.map((history: any, index: number) => (
+                <div key={index} style={{...styles.timelineItem, paddingLeft: "0.5rem"}}>
+                  {index < lead.status_history.length - 1 && (
+                    <div style={{...styles.timelineLine, backgroundColor: "#e2e8f0"}}></div>
+                  )}
+                  <div style={{...styles.timelineDot, 
+                    backgroundColor: "#4f46e5", 
+                    boxShadow: "0 0 0 3px rgba(79, 70, 229, 0.2)"
+                  }}></div>
+                  <p style={{...styles.timelineStatus, fontSize: "0.95rem", fontWeight: "600", color: "#1e293b"}}>{history.status}</p>
+                  <p style={{...styles.timelineDate, color: "#64748b"}}>{formatDateTime(history.created_at)}</p>
+                  <p style={{...styles.timelineBy, color: "#64748b"}}>By: {history.user_name || "System"}</p>
+                  {history.notes && (
+                    <p style={{marginTop: "0.5rem", fontSize: "0.875rem", color: "#4b5563"}}>{history.notes}</p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div style={{
+                padding: "1rem",
+                backgroundColor: "#f8fafc",
+                borderRadius: "0.5rem",
+                textAlign: "center",
+                color: "#64748b",
+                fontSize: "0.875rem"
+              }}>
+                No status history available
               </div>
-            ))}
+            )}
           </div>
         </div>
         
@@ -577,7 +523,7 @@ export default function LeadDetails({ params }: { params: { id: string } }) {
             style={{
               ...styles.actionButton, 
               ...styles.printButton,
-              backgroundColor: "#f8fafc",
+              backgroundColor: "#f8fafb",
               borderColor: "#e2e8f0",
               padding: "0.65rem 1.25rem",
               fontWeight: "600",

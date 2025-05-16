@@ -19,7 +19,7 @@ const styles: Record<string, CSSProperties | any> = {
   container: {
     maxWidth: "1500px",
     margin: "0 auto",
-    padding: "1.5rem 2rem 1.5rem 3rem",
+    padding: "1rem 1.5rem 1rem 2rem",
     marginLeft: "250px",
     width: "calc(100% - 250px)",
     transition: "margin-left 0.3s ease, width 0.3s ease",
@@ -131,14 +131,14 @@ const styles: Record<string, CSSProperties | any> = {
   buttonContainer: {
     display: "flex",
     justifyContent: "flex-end",
-    marginTop: "1.75rem",
+    marginTop: "1rem",
     gap: "0.75rem",
   },
   button: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "0.625rem 1.25rem",
+    padding: "0.5rem 1rem",
     backgroundColor: "#4f46e5",
     color: "white",
     fontWeight: "500",
@@ -146,7 +146,7 @@ const styles: Record<string, CSSProperties | any> = {
     border: "none",
     cursor: "pointer",
     transition: "all 0.2s",
-    fontSize: "0.8125rem",
+    fontSize: "0.75rem",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
   },
   buttonHover: {

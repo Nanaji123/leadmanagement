@@ -4,65 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-
-// Mock data for agents
-const MOCK_AGENTS = [
-  {
-    id: 101,
-    name: "Rahul Sharma",
-    email: "rahul.sharma@example.com",
-    phone: "9876543210",
-    branch: "Mumbai Central",
-    joinDate: "2023-01-15",
-    status: "Active",
-    leadsGenerated: 45,
-    leadsConverted: 18
-  },
-  {
-    id: 102,
-    name: "Priya Patel",
-    email: "priya.patel@example.com",
-    phone: "8765432109",
-    branch: "Delhi North",
-    joinDate: "2023-02-10",
-    status: "Active",
-    leadsGenerated: 38,
-    leadsConverted: 15
-  },
-  {
-    id: 103,
-    name: "Amit Kumar",
-    email: "amit.kumar@example.com",
-    phone: "7654321098",
-    branch: "Bangalore East",
-    joinDate: "2023-03-05",
-    status: "Active",
-    leadsGenerated: 52,
-    leadsConverted: 24
-  },
-  {
-    id: 104,
-    name: "Neha Gupta",
-    email: "neha.gupta@example.com",
-    phone: "6543210987",
-    branch: "Chennai Central",
-    joinDate: "2023-03-20",
-    status: "Inactive",
-    leadsGenerated: 27,
-    leadsConverted: 9
-  },
-  {
-    id: 105,
-    name: "Vikram Singh",
-    email: "vikram.singh@example.com",
-    phone: "9876543211",
-    branch: "Hyderabad West",
-    joinDate: "2023-04-15",
-    status: "Active",
-    leadsGenerated: 32,
-    leadsConverted: 13
-  }
-];
+import { getAgents } from "@/services/agentService";
 
 // Styles using inline CSS
 const styles = {
@@ -466,21 +408,23 @@ export default function ManageAgents() {
       return;
     }
     
-    // In a real app, fetch agents from API
-    // Using mock data for demo
+    // Fetch agents from API
     setLoading(true);
     
-    try {
-      // Simulate API call delay
-      setTimeout(() => {
-        setAgents(MOCK_AGENTS);
-        setFilteredAgents(MOCK_AGENTS);
+    const fetchAgents = async () => {
+      try {
+        const fetchedAgents = await getAgents();
+        setAgents(fetchedAgents);
+        setFilteredAgents(fetchedAgents);
         setLoading(false);
-      }, 500);
-    } catch (err) {
-      setError("Failed to load agents data");
-      setLoading(false);
-    }
+      } catch (err) {
+        console.error("Error fetching agents:", err);
+        setError("Failed to load agents data");
+        setLoading(false);
+      }
+    };
+    
+    fetchAgents();
     
     // Handle responsive behavior
     const checkIfMobile = () => {

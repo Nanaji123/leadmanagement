@@ -8,68 +8,7 @@ import Link from "next/link";
 
 import { getLeads } from "@/services/leadService";
 
-const MOCK_LEADS = [
-  {
-    id: 1,
-    full_name: "Rahul Sharma",
-    phoneNumber: "9876543210",
-    email: "rahul.sharma@example.com",
-    income: "750000",
-    city: "Mumbai",
-    state: "Maharashtra",
-    loan_requirement: "500000",
-    status: "New",
-    created_at: "2023-07-15T10:30:00Z"
-  },
-  {
-    id: 2,
-    full_name: "Priya Patel",
-    phoneNumber: "8765432109",
-    email: "priya.patel@example.com",
-    income: "850000",
-    city: "Delhi",
-    state: "Delhi",
-    loan_requirement: "750000",
-    status: "In Review",
-    created_at: "2023-07-14T09:15:00Z"
-  },
-  {
-    id: 3,
-    full_name: "Amit Kumar",
-    phoneNumber: "7654321098",
-    email: "amit.kumar@example.com",
-    income: "950000",
-    city: "Bangalore",
-    state: "Karnataka",
-    loan_requirement: "1000000",
-    status: "Approved",
-    created_at: "2023-07-10T14:20:00Z"
-  },
-  {
-    id: 4,
-    full_name: "Neha Gupta",
-    phoneNumber: "6543210987",
-    email: "neha.gupta@example.com",
-    income: "600000",
-    city: "Chennai",
-    state: "Tamil Nadu",
-    loan_requirement: "400000",
-    status: "Rejected",
-    created_at: "2023-07-05T11:45:00Z"
-  },
-  {
-    id: 5,
-    full_name: "Vikram Singh",
-    phoneNumber: "5432109876",
-    email: "vikram.singh@example.com",
-    income: "1200000",
-    city: "Hyderabad",
-    state: "Telangana",
-    loan_requirement: "800000",
-    status: "New",
-    created_at: "2023-07-16T08:30:00Z"
-  }
-];
+
 
 interface Lead {
   id: number;

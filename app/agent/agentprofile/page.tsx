@@ -4,35 +4,35 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
+import { getUserProfile } from "@/services/userService";
 
 // CSS type declaration to fix type errors
 type CSSProperties = React.CSSProperties;
 
-// Mock user data for the agent profile page
-const MOCK_AGENT_DATA = {
-  name: "John Doe",
-  email: "john.doe@example.com",
-  phone: "9876543210",
-  role: "agent",
-  joinDate: "2023-01-15",
-  employeeId: "AGT-2023-001",
-  branch: "Mumbai Central",
-  manager: "Rajesh Kumar",
-  recentActivity: [
-    { action: "Lead Submitted", date: "2023-08-10T10:30:00Z", details: "Anil Kumar (ID: 1)" },
-    { action: "Lead Updated", date: "2023-08-08T14:15:00Z", details: "Sunita Sharma (ID: 2)" },
-    { action: "Profile Updated", date: "2023-08-05T09:45:00Z", details: "Changed phone number" },
-    { action: "Lead Approved", date: "2023-08-01T11:20:00Z", details: "Vikram Malhotra (ID: 3)" }
-  ],
+// Define Agent interface
+interface AgentData {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  joinDate: string;
+  employeeId: string;
+  branch: string;
+  manager: string;
+  recentActivity: {
+    action: string;
+    date: string;
+    details: string;
+  }[];
   performance: {
-    totalLeads: 28,
-    approvalRate: 64,
-    conversionRate: 42,
-    averageResponseTime: "2 days",
-    ranking: 5,
-    totalAgents: 25
-  }
-};
+    totalLeads: number;
+    approvalRate: number;
+    conversionRate: number;
+    averageResponseTime: string;
+    ranking: number;
+    totalAgents: number;
+  };
+}
 
 // Styles using inline CSS
 const styles: Record<string, CSSProperties> = {
@@ -313,7 +313,7 @@ const styles: Record<string, CSSProperties> = {
 
 export default function AgentProfile() {
   const router = useRouter();
-  const [agent, setAgent] = useState(MOCK_AGENT_DATA);
+  const [agent, setAgent] = useState<AgentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
@@ -322,8 +322,8 @@ export default function AgentProfile() {
 
   // Form state for settings
   const [settings, setSettings] = useState({
-    email: MOCK_AGENT_DATA.email,
-    phone: MOCK_AGENT_DATA.phone,
+    email: "",
+    phone: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -354,23 +354,16 @@ export default function AgentProfile() {
 
   // Check authentication and handle responsive behavior
   useEffect(() => {
-    // Get agent ID from URL query parameter
-    const queryParams = new URLSearchParams(window.location.search);
-    const idFromQuery = queryParams.get('id');
-    if (idFromQuery) {
-      setAgentId(idFromQuery);
-      console.log("Viewing agent with ID:", idFromQuery);
-    }
-    
     const token = localStorage.getItem("authToken");
     const userRole = localStorage.getItem("userRole");
+    const storedAgentId = localStorage.getItem("userId");
     
     if (!token) {
       router.push("/");
       return;
     }
     
-    // Allow both agent (viewing own profile) and admin (viewing any agent)
+    // Check if admin is viewing agent profile
     if (userRole === "admin") {
       setViewingAsAdmin(true);
     } else if (userRole !== "agent") {
@@ -378,10 +371,30 @@ export default function AgentProfile() {
       return;
     }
     
-    // In a real app, fetch agent data from API
-    // Using mock data for demo
-    // If viewing a specific agent (admin view), this would fetch that agent's data
-    setLoading(false);
+    if (storedAgentId) {
+      setAgentId(storedAgentId);
+    }
+    
+    // Fetch agent data from API
+    const fetchAgentProfile = async () => {
+      try {
+        const agentData = await getUserProfile();
+        setAgent(agentData);
+        setSettings({
+          email: agentData.email,
+          phone: agentData.phone,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching agent profile:", error);
+        setLoading(false);
+      }
+    };
+    
+    fetchAgentProfile();
     
     // Handle responsive behavior
     const checkIfMobile = () => {
@@ -496,26 +509,26 @@ export default function AgentProfile() {
           
           <div style={styles.profileSection}>
             <div style={styles.avatar}>
-              {agent.name.charAt(0)}
+              {agent?.name.charAt(0)}
             </div>
             
             <div style={styles.profileInfo}>
-              <h3 style={styles.profileName}>{agent.name}</h3>
+              <h3 style={styles.profileName}>{agent?.name}</h3>
               <span style={styles.profileRole}>Sales Agent</span>
               
               <div style={styles.profileDetail}>
                 <span style={styles.detailIcon}>📧</span>
-                {agent.email}
+                {agent?.email}
               </div>
               
               <div style={styles.profileDetail}>
                 <span style={styles.detailIcon}>📱</span>
-                {agent.phone}
+                {agent?.phone}
               </div>
               
               <div style={styles.profileDetail}>
                 <span style={styles.detailIcon}>📅</span>
-                Joined on {formatDate(agent.joinDate)}
+                Joined on {formatDate(agent?.joinDate || "")}
               </div>
             </div>
           </div>
@@ -530,7 +543,7 @@ export default function AgentProfile() {
               boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)"
             }}>
               <div style={{...styles.infoLabel, color: "#4f46e5"}}>Employee ID</div>
-              <div style={styles.infoValue}>{agent.employeeId}</div>
+              <div style={styles.infoValue}>{agent?.employeeId}</div>
             </div>
             
             <div style={{
@@ -542,7 +555,7 @@ export default function AgentProfile() {
               boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)"
             }}>
               <div style={{...styles.infoLabel, color: "#4f46e5"}}>Branch</div>
-              <div style={styles.infoValue}>{agent.branch}</div>
+              <div style={styles.infoValue}>{agent?.branch}</div>
             </div>
             
             <div style={{
@@ -554,7 +567,7 @@ export default function AgentProfile() {
               boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)"
             }}>
               <div style={{...styles.infoLabel, color: "#4f46e5"}}>Reporting Manager</div>
-              <div style={styles.infoValue}>{agent.manager}</div>
+              <div style={styles.infoValue}>{agent?.manager}</div>
             </div>
           </div>
         </div>
@@ -786,28 +799,28 @@ export default function AgentProfile() {
                   <div>
                     <div style={styles.statLabel}>Total Leads Submitted</div>
                   </div>
-                  <div style={{...styles.statValue, color: "#4f46e5"}}>{agent.performance.totalLeads}</div>
+                  <div style={{...styles.statValue, color: "#4f46e5"}}>{agent?.performance?.totalLeads || 0}</div>
                 </div>
                 
                 <div style={{...styles.statItem, borderLeft: "3px solid #10b981", margin: "0.5rem 0"}}>
                   <div>
                     <div style={styles.statLabel}>Approval Rate</div>
                   </div>
-                  <div style={{...styles.statValue, color: "#10b981"}}>{agent.performance.approvalRate}%</div>
+                  <div style={{...styles.statValue, color: "#10b981"}}>{agent?.performance?.approvalRate || 0}%</div>
                 </div>
                 
                 <div style={{...styles.statItem, borderLeft: "3px solid #f59e0b", margin: "0.5rem 0"}}>
                   <div>
                     <div style={styles.statLabel}>Conversion Rate</div>
                   </div>
-                  <div style={{...styles.statValue, color: "#f59e0b"}}>{agent.performance.conversionRate}%</div>
+                  <div style={{...styles.statValue, color: "#f59e0b"}}>{agent?.performance?.conversionRate || 0}%</div>
                 </div>
                 
                 <div style={{...styles.statItem, borderLeft: "3px solid #6366f1", borderBottom: "none", margin: "0.5rem 0"}}>
                   <div>
                     <div style={styles.statLabel}>Average Response Time</div>
                   </div>
-                  <div style={{...styles.statValue, color: "#6366f1"}}>{agent.performance.averageResponseTime}</div>
+                  <div style={{...styles.statValue, color: "#6366f1"}}>{agent?.performance?.averageResponseTime || "N/A"}</div>
                 </div>
                 
                 <div style={{
@@ -826,15 +839,16 @@ export default function AgentProfile() {
                         borderRadius: "0.25rem", 
                         fontSize: "0.85rem",
                         boxShadow: "0 1px 3px rgba(79, 70, 229, 0.25)"
-                      }}>#{agent.performance.ranking}</span>
-                      <span style={{fontSize: "0.8rem", color: "#64748b", fontWeight: "500"}}>of {agent.performance.totalAgents}</span>
+                      }}>#{agent?.performance?.ranking || 0}</span>
+                      <span style={{fontSize: "0.8rem", color: "#64748b", fontWeight: "500"}}>of {agent?.performance?.totalAgents || 0}</span>
                     </div>
                   </div>
-                  <div style={styles.rankingBar}>
-                    <div 
+                  <div className="ranking-progress-bar" style={{...styles.rankingBar}}>
+                    <div className="ranking-progress" 
                       style={{
                         ...styles.rankingProgress,
-                        width: `${100 - ((agent.performance.ranking / agent.performance.totalAgents) * 100)}%`
+                        width: (agent?.performance?.ranking && agent?.performance?.totalAgents && agent.performance.totalAgents > 0) ? 
+                          `${100 - ((agent.performance.ranking / agent.performance.totalAgents) * 100)}%` : "0%"
                       }}
                     />
                   </div>
@@ -859,7 +873,7 @@ export default function AgentProfile() {
                 </div>
                 
                 <div style={{maxHeight: "300px", overflowY: "auto"}}>
-                  {agent.recentActivity.map((activity, index) => (
+                  {agent?.recentActivity.map((activity, index) => (
                     <div 
                       key={index} 
                       style={{

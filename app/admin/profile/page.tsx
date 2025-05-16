@@ -4,35 +4,35 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
+import { getUserProfile } from "@/services/userService";
 
 // CSS type declaration to fix type errors
 type CSSProperties = React.CSSProperties;
 
-// Mock admin data for the profile page
-const MOCK_ADMIN_DATA = {
-  name: "Admin User",
-  email: "admin@example.com",
-  phone: "9876543210",
-  role: "admin",
-  joinDate: "2022-05-10",
-  employeeId: "ADM-2022-001",
-  department: "Sales Management",
-  position: "Senior Administrator",
-  recentActivity: [
-    { action: "Agent Added", date: "2023-08-11T14:30:00Z", details: "Added new agent: Ravi Sharma" },
-    { action: "Lead Approved", date: "2023-08-10T16:15:00Z", details: "Approved lead ID: 5" },
-    { action: "System Update", date: "2023-08-09T09:30:00Z", details: "Updated lead workflow system" },
-    { action: "Report Generated", date: "2023-08-07T11:20:00Z", details: "Monthly performance report" }
-  ],
+// Define Admin interface
+interface Admin {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  joinDate: string;
+  employeeId: string;
+  department: string;
+  position: string;
+  recentActivity: {
+    action: string;
+    date: string;
+    details: string;
+  }[];
   systemStats: {
-    totalAgents: 25,
-    activeAgents: 22,
-    totalLeadsMonth: 342,
-    conversionRateMonth: 38,
-    pendingApprovals: 14,
-    systemUptime: "99.8%"
-  }
-};
+    totalAgents: number;
+    activeAgents: number;
+    totalLeadsMonth: number;
+    conversionRateMonth: number;
+    pendingApprovals: number;
+    systemUptime: string;
+  };
+}
 
 // Styles using inline CSS
 const styles: Record<string, CSSProperties> = {
@@ -341,7 +341,7 @@ const styles: Record<string, CSSProperties> = {
 
 export default function AdminProfile() {
   const router = useRouter();
-  const [admin, setAdmin] = useState(MOCK_ADMIN_DATA);
+  const [admin, setAdmin] = useState<Admin | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
@@ -356,8 +356,8 @@ export default function AdminProfile() {
 
   // Form state for settings
   const [settings, setSettings] = useState({
-    email: MOCK_ADMIN_DATA.email,
-    phone: MOCK_ADMIN_DATA.phone,
+    email: "",
+    phone: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -373,9 +373,26 @@ export default function AdminProfile() {
       return;
     }
     
-    // In a real app, fetch admin data from API
-    // Using mock data for demo
-    setLoading(false);
+    // Fetch admin data from API
+    const fetchAdminProfile = async () => {
+      try {
+        const adminData = await getUserProfile();
+        setAdmin(adminData);
+        setSettings({
+          email: adminData.email,
+          phone: adminData.phone,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching admin profile:", error);
+        setLoading(false);
+      }
+    };
+    
+    fetchAdminProfile();
     
     // Handle responsive behavior
     const checkIfMobile = () => {
@@ -469,26 +486,26 @@ export default function AdminProfile() {
           
           <div style={styles.profileSection}>
             <div style={styles.avatar}>
-              {admin.name.charAt(0)}
+              {admin?.name.charAt(0)}
             </div>
             
             <div style={styles.profileInfo}>
-              <h3 style={styles.profileName}>{admin.name}</h3>
+              <h3 style={styles.profileName}>{admin?.name}</h3>
               <span style={styles.profileRole}>System Administrator</span>
               
               <div style={styles.profileDetail}>
                 <span style={styles.detailIcon}>📧</span>
-                {admin.email}
+                {admin?.email}
               </div>
               
               <div style={styles.profileDetail}>
                 <span style={styles.detailIcon}>📱</span>
-                {admin.phone}
+                {admin?.phone}
               </div>
               
               <div style={styles.profileDetail}>
                 <span style={styles.detailIcon}>📅</span>
-                Administrator since {formatDate(admin.joinDate)}
+                Administrator since {formatDate(admin?.joinDate || "")}
               </div>
             </div>
           </div>
@@ -496,17 +513,17 @@ export default function AdminProfile() {
           <div style={styles.infoGrid}>
             <div style={styles.infoItem}>
               <div style={styles.infoLabel}>Employee ID</div>
-              <div style={styles.infoValue}>{admin.employeeId}</div>
+              <div style={styles.infoValue}>{admin?.employeeId}</div>
             </div>
             
             <div style={styles.infoItem}>
               <div style={styles.infoLabel}>Department</div>
-              <div style={styles.infoValue}>{admin.department}</div>
+              <div style={styles.infoValue}>{admin?.department}</div>
             </div>
             
             <div style={styles.infoItem}>
               <div style={styles.infoLabel}>Position</div>
-              <div style={styles.infoValue}>{admin.position}</div>
+              <div style={styles.infoValue}>{admin?.position}</div>
             </div>
           </div>
         </div>
@@ -527,7 +544,7 @@ export default function AdminProfile() {
             gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)"
           }}>
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{admin.systemStats.totalAgents}</div>
+              <div style={styles.statValue}>{admin?.systemStats.totalAgents}</div>
               <div style={styles.statLabel}>Total Agents</div>
               <div style={styles.statTrend}>
                 <span style={styles.trendUp}>↑ 2 this month</span>
@@ -535,7 +552,7 @@ export default function AdminProfile() {
             </div>
             
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{admin.systemStats.activeAgents}</div>
+              <div style={styles.statValue}>{admin?.systemStats.activeAgents}</div>
               <div style={styles.statLabel}>Active Agents</div>
               <div style={styles.statTrend}>
                 <span style={styles.trendUp}>↑ 3 this week</span>
@@ -543,7 +560,7 @@ export default function AdminProfile() {
             </div>
             
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{admin.systemStats.totalLeadsMonth}</div>
+              <div style={styles.statValue}>{admin?.systemStats.totalLeadsMonth}</div>
               <div style={styles.statLabel}>Total Leads This Month</div>
               <div style={styles.statTrend}>
                 <span style={styles.trendUp}>↑ 8% from last month</span>
@@ -551,7 +568,7 @@ export default function AdminProfile() {
             </div>
             
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{admin.systemStats.conversionRateMonth}%</div>
+              <div style={styles.statValue}>{admin?.systemStats.conversionRateMonth}%</div>
               <div style={styles.statLabel}>Conversion Rate</div>
               <div style={styles.statTrend}>
                 <span style={styles.trendUp}>↑ 2% from last month</span>
@@ -559,7 +576,7 @@ export default function AdminProfile() {
             </div>
             
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{admin.systemStats.pendingApprovals}</div>
+              <div style={styles.statValue}>{admin?.systemStats.pendingApprovals}</div>
               <div style={styles.statLabel}>Pending Approvals</div>
               <div style={styles.statTrend}>
                 <span style={styles.trendDown}>↓ Needs attention</span>
@@ -567,7 +584,7 @@ export default function AdminProfile() {
             </div>
             
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{admin.systemStats.systemUptime}</div>
+              <div style={styles.statValue}>{admin?.systemStats.systemUptime}</div>
               <div style={styles.statLabel}>System Uptime</div>
               <div style={styles.statTrend}>
                 <span style={styles.trendUp}>↑ Stable</span>
@@ -775,7 +792,7 @@ export default function AdminProfile() {
               </Link>
             </div>
             
-            {admin.recentActivity.map((activity, index) => (
+            {admin?.recentActivity.map((activity, index) => (
               <div key={index} style={styles.activityItem}>
                 <div style={styles.activityHeader}>
                   <div style={styles.activityTitle}>{activity.action}</div>
